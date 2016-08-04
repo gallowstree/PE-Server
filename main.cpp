@@ -23,8 +23,8 @@ std::vector<Player> players;
 void init()
 {
     pthread_mutex_init(&commandQueueMutex, NULL);
-    players.push_back(Player(0, sf::Vector2f(0.0f,0.0f)));
-    players.push_back(Player(1, sf::Vector2f(0.0f,0.0f)));
+    players.push_back(Player(0, "192.168.2.2", 50421, sf::Vector2f(0.0f,0.0f)));
+    players.push_back(Player(1, "192.168.2.6", 50421, sf::Vector2f(0.0f,0.0f)));
 }
 
 
@@ -43,8 +43,8 @@ void *listenToClients(void * args)
 
     /*Configure settings in address struct*/
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(7891);
-    serverAddr.sin_addr.s_addr = inet_addr("192.168.1.78");
+    serverAddr.sin_port = htons(50420);
+    serverAddr.sin_addr.s_addr = inet_addr("192.168.2.6");
     memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);
 
     /*Bind socket with address struct*/
@@ -52,60 +52,23 @@ void *listenToClients(void * args)
 
     /*Initialize size variable to be used later on*/
     addr_size = sizeof serverStorage;
-    int received[4];
     while(1)
     {
-        /* Try to receive any incoming UDP datagram. Address and port of
-          requesting client will be stored on serverStorage variable */
         nBytes = recvfrom(udpSocket, buffer, COMMAND_BUFFER_SIZE, 0, (struct sockaddr *)&serverStorage, &addr_size);
 
-        int playerId;
-        charsToInt(buffer, playerId, 0);
-        printf("playerId: %i ", playerId);
+        command_t command;
+        charsToInt(buffer, command.playerId, 0);
+        printf("playerId: %i ", command.playerId);
 
-        int msgNum;
-        charsToInt(buffer, msgNum, 4);
-        printf("msgNum: %i ", msgNum);
+        charsToInt(buffer, command.msgNum, 4);
+        printf("msgNum: %i ", command.msgNum);
 
-        int keys;
-        charsToInt(buffer, keys, 8);
-        printf("keys: %04x\n", keys);
-
-        float speed = 2;
-        if (keys & 0x1)
-            players[playerId].position.y += speed;
-        if (keys & 0x10)
-            players[playerId].position.y -= speed;
-        if (keys & 0x100)
-                players[playerId].position.x -= speed;
-        if (keys & 0x1000)
-            players[playerId].position.x += speed;
-
-        char outbuffer[512];
-
-        intToChars(4, outbuffer, 0); //idmsg
-
-        int pos = 4;
-        for (auto &player : players) // access by reference to avoid copying
-        {
-            intToChars(player.playerId, outbuffer, pos);
-            pos += 4;
-            floatToChars(player.position.x, outbuffer, pos);
-            pos += 4;
-            floatToChars(player.position.y, outbuffer, pos);
-            pos += 4;
-        }
-
-
+        charsToInt(buffer, command.controls, 8);
+        printf("keys: %04x\n", command.controls);
 
         pthread_mutex_lock(&commandQueueMutex);
-        //commandQueue.push(command);
+        commandQueue.push(command);
         pthread_mutex_unlock(&commandQueueMutex);
-
-
-
-        /*Send uppercase message back to client, using serverStorage as the address*/
-        sendto(udpSocket,outbuffer,pos,0,(struct sockaddr *)&serverStorage,addr_size);
     }
 
     return 0;
@@ -113,7 +76,30 @@ void *listenToClients(void * args)
 
 void update(sf::Time elapsedTime)
 {
+    for (auto &player : players)
+    {
+        player.update(elapsedTime);
+    }
 
+    char outbuffer[512];
+
+    intToChars(4, outbuffer, 0); //idmsg
+
+    int pos = 4;
+    for (auto &player : players)
+    {
+        intToChars(player.playerId, outbuffer, pos);
+        pos += 4;
+        floatToChars(player.position.x, outbuffer, pos);
+        pos += 4;
+        floatToChars(player.position.y, outbuffer, pos);
+        pos += 4;
+    }
+
+    for (auto &player : players)
+    {
+        player.send(outbuffer, pos);
+    }
 }
 
 void processEvents()
@@ -121,13 +107,13 @@ void processEvents()
 
     while (!commandQueue.empty())
     {
-        /*pthread_mutex_lock(&commandQueueMutex);
-        char* command = commandQueue.front();
+        pthread_mutex_lock(&commandQueueMutex);
+        command_t command = commandQueue.front();
         commandQueue.pop();
         pthread_mutex_unlock(&commandQueueMutex);
-        printf("Command: %s\n", command);*/
-    }
 
+        players[command.playerId].controls = command.controls;
+    }
 
 }
 

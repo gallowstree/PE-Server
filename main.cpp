@@ -74,11 +74,11 @@ void *listenToClients(void * args)
         float speed = 2;
         if (keys & 0x1)
             players[playerId].position.y += speed;
-        if (keys & 0x10)
+        if (keys & 0x2)
             players[playerId].position.y -= speed;
-        if (keys & 0x100)
+        if (keys & 0x4)
                 players[playerId].position.x -= speed;
-        if (keys & 0x1000)
+        if (keys & 0x8)
             players[playerId].position.x += speed;
 
         char outbuffer[512];

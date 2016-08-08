@@ -4,6 +4,7 @@
 
 #include <arpa/inet.h>
 #include "Player.h"
+#include <string.h>
 
 
 

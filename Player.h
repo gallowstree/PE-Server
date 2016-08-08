@@ -16,6 +16,7 @@ class Player
 public:
     const int playerId;
     int lastMsgNum;
+    int lastBulletFrame = 0;
     const int port;
     const char* ip;
     sf::Vector2f position;

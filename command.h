@@ -8,7 +8,11 @@
 typedef struct commamd
 {
     int playerId;
-    int action;
+    int msgNum;
+    int controls;
 } command_t;
+
+
+
 
 #endif //TEST_SERVER_COMMAND_H

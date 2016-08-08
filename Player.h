@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include "Projectile.h"
+#include "reliable_message.h"
 
 
 class Player
@@ -22,7 +23,8 @@ public:
     //Connection data
     const int16_t playerId;
     int lastMsgNum;
-    
+    std::map<int32_t, reliable_message_t> reliable_queue;
+
 
     //Physics
     float speed = 500;
@@ -37,7 +39,7 @@ public:
     std::vector<Projectile> projectiles;
 
     Player(int16_t playerId, const char* ip, int port, sf::Vector2f position);
-    void send(const char* outbuffer, size_t size);
+    void send(const char* outbuffer, size_t size, int32_t reliableId = -1);
     void update(sf::Time elapsedTime);
 
     int serialize(char *buffer, int position);

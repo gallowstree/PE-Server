@@ -40,11 +40,36 @@ void Player::initSocket()
     addr_size = sizeof serverAddr;
 }
 
-void Player::send(const char *outbuffer, size_t size)
+void Player::send(const char *outbuffer, size_t size, int32_t reliableId)
 {
     sendto(udpSocket,outbuffer,size,0,(struct sockaddr *)&serverAddr, addr_size);
     int i = errno;
     //printf("Sending %s!\n",strerror(errno));
+
+    if (reliableId != -1)
+    {
+        //Copiar el buffer a uno confiable
+        char* copyBuffer = (char *)malloc(size);
+        memcpy(copyBuffer, outbuffer, size);
+
+        //Might need unique_ptrs
+        reliable_message_t message;
+        message.buffer = copyBuffer;
+        message.messageId = reliableId;
+        //Insertar mensaje confiable
+        //reliable_queue.insert(std::pair<int32_t, reliable_message_t*>(reliableId, &message));
+        reliable_queue[reliableId] = message;
+    }
+
+
+    for (auto const& message: reliable_queue)
+    {
+        if (message.first != reliableId)
+        {
+            sendto(udpSocket, message.second.buffer, message.second.size, 0,(struct sockaddr *)&serverAddr, addr_size);
+        }
+    }
+
 }
 
 void Player::update(sf::Time elapsedTime)

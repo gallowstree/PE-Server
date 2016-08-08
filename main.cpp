@@ -83,7 +83,7 @@ void *listenToClients(void * args)
 
     return 0;
 }
-
+bool sent = false;
 void update(sf::Time elapsedTime)
 {
     for (auto &player : players)
@@ -100,7 +100,7 @@ void update(sf::Time elapsedTime)
     Serialization::shortToChars(s_players_command, outbuffer, pos); //Command type 4 - 5
     pos += 2;
 
-    Serialization::intToChars(message_number++, projectiles, projectile_pos);
+    Serialization::intToChars(message_number, projectiles, projectile_pos);
     projectile_pos += 4;
     Serialization::intToChars(s_projectiles_command, projectiles, projectile_pos);
     projectile_pos += 2;
@@ -126,8 +126,12 @@ void update(sf::Time elapsedTime)
     {
         player.send(outbuffer, pos);
 
-        if (projectile_pos > 10)
-            player.send(projectiles, projectile_pos);
+        if (projectile_pos > 10 && !sent)
+        {
+            player.send(projectiles, projectile_pos, message_number++);
+            sent = true;
+        }
+
     }
 }
 

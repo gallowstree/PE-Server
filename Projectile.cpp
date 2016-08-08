@@ -42,7 +42,9 @@ int Projectile::serialize(char * buffer, int position)
     pos += 4;
     Serialization::floatToChars(this->position.y, buffer, pos); //Pos y 13 - 17
     pos += 4;
-    Serialization::floatToChars(this->angle, buffer, pos); //Pos y 13 - 17
+    Serialization::floatToChars(this->origin.x, buffer, pos); //Pos x 8 - 12
+    pos += 4;
+    Serialization::floatToChars(this->origin.y, buffer, pos); //Pos y 13 - 17
     pos += 4;
 
     return pos - position;

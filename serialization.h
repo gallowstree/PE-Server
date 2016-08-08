@@ -22,48 +22,53 @@ typedef union s2c {
     char c[2];
 } short2Chars;
 
-
-void floatToChars(const float& f, char c[], int position)
+class Serialization
 {
-    float2Chars converter;
-    converter.f = f;
-    memcpy(c + position, converter.c, sizeof(f) );
-}
+public:
+    static void floatToChars(const float& f, char c[], int position)
+    {
+        float2Chars converter;
+        converter.f = f;
+        memcpy(c + position, converter.c, sizeof(f) );
+    }
 
-void charsToFloat(const char c[], float& f, int position)
-{
-    float2Chars converter;
-    memcpy(converter.c, c + position, sizeof(float));
-    f = converter.f;
-}
+    static void charsToFloat(const char c[], float& f, int position)
+    {
+        float2Chars converter;
+        memcpy(converter.c, c + position, sizeof(float));
+        f = converter.f;
+    }
 
-void intToChars(const int& i, char c[], int position)
-{
-    int2Chars converter;
-    converter.i = i;
-    memcpy(c + position, converter.c, sizeof(i) );
-}
+    static void intToChars(const int& i, char c[], int position)
+    {
+        int2Chars converter;
+        converter.i = i;
+        memcpy(c + position, converter.c, sizeof(i) );
+    }
 
-void charsToInt(const char c[], int& i, int position)
-{
-    int2Chars converter;
-    memcpy(converter.c, c + position, sizeof(int32_t));
-    i = converter.i;
-}
+    static void charsToInt(const char c[], int& i, int position)
+    {
+        int2Chars converter;
+        memcpy(converter.c, c + position, sizeof(int32_t));
+        i = converter.i;
+    }
 
-void shortToChars(const short& s, char c[], int position)
-{
-    short2Chars converter;
-    converter.s = s;
-    memcpy(c + position, converter.c, sizeof(s) );
-}
+    static void shortToChars(const short& s, char c[], int position)
+    {
+        short2Chars converter;
+        converter.s = s;
+        memcpy(c + position, converter.c, sizeof(s) );
+    }
 
-void charsToShort(const char c[], short& s, int position)
-{
-    short2Chars converter;
-    memcpy(converter.c, c + position, sizeof(int16_t));
-    s = converter.s;
-}
+    static void charsToShort(const char c[], short& s, int position)
+    {
+        short2Chars converter;
+        memcpy(converter.c, c + position, sizeof(int16_t));
+        s = converter.s;
+    }
+};
+
+
 
 
 

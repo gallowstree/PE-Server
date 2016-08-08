@@ -7,7 +7,8 @@
 
 typedef struct commamd
 {
-    int playerId;
+    int16_t playerId;
+    int16_t commandType;
     int msgNum;
     int controls;
 } command_t;

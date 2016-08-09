@@ -26,14 +26,16 @@ std::queue<command_t> commandQueue;
 pthread_mutex_t commandQueueMutex;
 
 std::vector<Player> players;
+std::map<int32_t, Projectile[]> projectilesInMessage;
 
-const char* serverIP = "192.168.1.90";
+const char* serverIP = "192.168.2.1";
 
 
 void init()
 {
+    nextProjectileId = 0;
     pthread_mutex_init(&commandQueueMutex, NULL);
-    players.push_back(Player(0, "192.168.1.12", 50421, sf::Vector2f(20.0f,20.0f)));
+    players.push_back(Player(0, "192.168.2.2", 50421, sf::Vector2f(20.0f,20.0f)));
     players.push_back(Player(1, serverIP, 50421, sf::Vector2f(10.0f,10.0f)));
     //players.push_back(Player(2, "127.0.0.1", 50421, sf::Vector2f(40.0f,0.0f)));
 }
@@ -83,7 +85,7 @@ void *listenToClients(void * args)
 
     return 0;
 }
-bool sent = false;
+
 void update(sf::Time elapsedTime)
 {
     for (auto &player : players)
@@ -100,7 +102,7 @@ void update(sf::Time elapsedTime)
     Serialization::shortToChars(s_players_command, outbuffer, pos); //Command type 4 - 5
     pos += 2;
 
-    Serialization::intToChars(message_number, projectiles, projectile_pos);
+    Serialization::intToChars(message_number++, projectiles, projectile_pos);
     projectile_pos += 4;
     Serialization::intToChars(s_projectiles_command, projectiles, projectile_pos);
     projectile_pos += 2;
@@ -126,10 +128,9 @@ void update(sf::Time elapsedTime)
     {
         player.send(outbuffer, pos);
 
-        if (projectile_pos > 10 && !sent)
+        if (projectile_pos > 10)
         {
-            player.send(projectiles, projectile_pos, message_number++);
-            sent = true;
+            player.send(projectiles, projectile_pos);
         }
 
     }

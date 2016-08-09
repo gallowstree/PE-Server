@@ -7,23 +7,30 @@
 
 #include <SFML/Graphics.hpp>
 
+static int16_t nextProjectileId;
+
 class Projectile {
     sf::Vector2f position;
     sf::Vector2f origin;
     sf::Vector2f velocity;
     float speed = 500;
     float angle = 0;
-    float range = 200;
+    float range = 400;
     sf::RectangleShape rect;
 
 
     public:
         int16_t playerId;
-        Projectile(sf::Vector2f position, float speed, float angle, float range);
-        void update(sf::Time elapsedTime);
+        int16_t projectileId;
+        bool valid;
 
-    int serialize(char *buffer, int position);
-    bool valid;
+
+
+        Projectile(sf::Vector2f position, float speed, float angle, float range, int16_t type);
+        void update(sf::Time elapsedTime);
+        int serialize(char *buffer, int position);
+
+        int16_t projectileType;
 };
 
 

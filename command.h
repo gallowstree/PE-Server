@@ -11,6 +11,7 @@ typedef struct commamd
     int16_t commandType;
     int msgNum;
     int controls;
+    float rotation;
 } command_t;
 
 

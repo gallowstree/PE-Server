@@ -53,14 +53,14 @@ public:
         i = converter.i;
     }
 
-    static void shortToChars(const short& s, char c[], int position)
+    static void shortToChars(const int16_t & s, char c[], int position)
     {
         short2Chars converter;
         converter.s = s;
         memcpy(c + position, converter.c, sizeof(s) );
     }
 
-    static void charsToShort(const char c[], short& s, int position)
+    static void charsToShort(const char c[], int16_t & s, int position)
     {
         short2Chars converter;
         memcpy(converter.c, c + position, sizeof(int16_t));

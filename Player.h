@@ -33,7 +33,7 @@ public:
     sf::Vector2f velocity;
 
     //Events
-    int controls;
+    int controls = 0;
 
     //Weapons
     std::vector<Projectile> projectiles;

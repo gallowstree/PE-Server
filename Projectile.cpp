@@ -22,7 +22,7 @@ projectileType(type)
 
 void Projectile::update(sf::Time elapsedTime)
 {
-    position += velocity * elapsedTime.asSeconds();
+    this->position += velocity * elapsedTime.asSeconds();
     sf::Vector2f distance = position - origin;
 
     if (sqrtf(distance.x*distance.x + distance.y*distance.y) >= range)

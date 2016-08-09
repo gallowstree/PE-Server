@@ -26,17 +26,17 @@ std::queue<command_t> commandQueue;
 pthread_mutex_t commandQueueMutex;
 
 std::vector<Player> players;
-std::map<int32_t, Projectile[]> projectilesInMessage;
+//std::map<int32_t, Projectile[]> projectilesInMessage;
 
-const char* serverIP = "192.168.2.1";
+const char* serverIP = "127.0.0.1";
 
 
 void init()
 {
     nextProjectileId = 0;
     pthread_mutex_init(&commandQueueMutex, NULL);
-    players.push_back(Player(0, "192.168.2.2", 50421, sf::Vector2f(20.0f,20.0f)));
-    players.push_back(Player(1, serverIP, 50421, sf::Vector2f(10.0f,10.0f)));
+    players.push_back(Player(0, serverIP, 50421, sf::Vector2f(20.0f,20.0f)));
+    players.push_back(Player(1, "192.168.2.2", 50421, sf::Vector2f(10.0f,10.0f)));
     //players.push_back(Player(2, "127.0.0.1", 50421, sf::Vector2f(40.0f,0.0f)));
 }
 
@@ -72,7 +72,7 @@ void *listenToClients(void * args)
         Serialization::charsToShort(buffer, command.playerId, 2);
         Serialization::charsToInt(buffer, command.msgNum, 4);
         Serialization::charsToInt(buffer, command.controls, 8);
-
+        Serialization::charsToFloat(buffer, command.rotation, 12);
         /*printf("commandType: %i ", command.commandType);
         printf("playerId: %i ", command.playerId);
         printf("msgNum: %i ", command.msgNum);
@@ -146,6 +146,7 @@ void processEvents()
         commandQueue.pop();
 
         players[command.playerId].controls = command.controls;
+        players[command.playerId].rotation = command.rotation;
     }
     pthread_mutex_unlock(&commandQueueMutex);
 

@@ -28,7 +28,7 @@ pthread_mutex_t commandQueueMutex;
 std::vector<Player> players;
 //std::map<int32_t, Projectile[]> projectilesInMessage;
 
-const char* serverIP = "127.0.0.1";
+const char* serverIP = "192.168.43.125";
 
 
 void init()
@@ -36,8 +36,7 @@ void init()
     nextProjectileId = 0;
     pthread_mutex_init(&commandQueueMutex, NULL);
     players.push_back(Player(0, serverIP, 50421, sf::Vector2f(20.0f,20.0f)));
-    players.push_back(Player(1, "192.168.2.2", 50421, sf::Vector2f(10.0f,10.0f)));
-    //players.push_back(Player(2, "127.0.0.1", 50421, sf::Vector2f(40.0f,0.0f)));
+    players.push_back(Player(1, "192.168.43.14", 50421, sf::Vector2f(10.0f,10.0f)));
 }
 
 

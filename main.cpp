@@ -34,13 +34,11 @@ std::map<const char*, int16_t> player_ips;
 const char* serverIP = "192.168.1.9";
 
 
+
 void init()
 {
     nextProjectileId = 0;
     pthread_mutex_init(&commandQueueMutex, NULL);
-    /*players.push_back(Player(0, "192.168.2.2", 50421, sf::Vector2f(20.0f,20.0f)));
-    players.push_back(Player(1, "192.168.2.2", 50421, sf::Vector2f(10.0f,10.0f)));*/
-    //players.push_back(Player(2, "127.0.0.1", 50421, sf::Vector2f(40.0f,0.0f)));
 }
 
 

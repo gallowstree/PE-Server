@@ -28,10 +28,9 @@ std::queue<command_t> commandQueue;
 pthread_mutex_t commandQueueMutex;
 
 std::vector<Player> players;
-std::map<const char*, int16_t> player_ips;
 //std::map<int32_t, Projectile[]> projectilesInMessage;
 
-const char* serverIP = "192.168.1.9";
+const char* serverIP = "192.168.1.12";
 
 
 
@@ -76,7 +75,6 @@ void *listenToClients(void * args)
 
         if (commandType == c_input_command)
         {
-            printf("Receiving controls\n");
             Serialization::charsToShort(buffer, command.playerId, 2);
             Serialization::charsToInt(buffer, command.msgNum, 4);
             Serialization::charsToInt(buffer, command.controls, 8);
@@ -84,8 +82,8 @@ void *listenToClients(void * args)
         }
         else if (commandType == c_join_game_command)
         {
-            printf("received join command\n");
             command.client_ip = inet_ntoa(clientAddr.sin_addr);
+            printf("cliente hueco: %s ip\n",command.client_ip);
         }
 
         pthread_mutex_lock(&commandQueueMutex);
@@ -174,22 +172,33 @@ void processEvents()
 
         if (command.commandType == c_input_command && command.playerId != -1 && players.size() >= command.playerId)
         {
-            printf("Processing controls\n");
             players[command.playerId].controls = command.controls;
             players[command.playerId].rotation = command.rotation;
             players[command.playerId].hasNotAckedId = false;
         }
         else if (command.commandType == c_join_game_command)
         {
-            printf("Processing join request\n");
-            auto it = player_ips.find(command.client_ip);
-            if (it == player_ips.end())
+
+
+            int16_t playerIndex = -1;
+            for(auto &player : players)
             {
-                auto new_player_id = (int16_t)players.size();
-                player_ips[command.client_ip] = new_player_id;
-                Player newPlayer(new_player_id, command.client_ip, 50421, sf::Vector2f(20.0f,20.0f));
+                if(strcmp(player.ip,command.client_ip) == 0)
+                    playerIndex = player.playerId;
+            }
+            printf("Processing join request %s %d\n",command.client_ip,playerIndex);
+            if(playerIndex == -1)
+            {
+                int16_t new_player_id = (int16_t)players.size();
+                char * c_ip = (char *)malloc(strlen(command.client_ip)+1);
+                strcpy(c_ip,command.client_ip);
+                Player newPlayer(new_player_id, c_ip, 50421, sf::Vector2f(20.0f,20.0f));
                 players.push_back(newPlayer);
                 printf("Inserted player %d\n", new_player_id);
+            }
+            else
+            {
+                players[playerIndex].hasNotAckedId = true;
             }
         }
     }

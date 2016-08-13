@@ -18,7 +18,9 @@ const ushort COMMAND_BUFFER_SIZE = 1024;
 
 const int16_t s_players_command = 0;
 const int16_t s_projectiles_command = 1;
+int16_t const s_player_id_command = 2;
 const int16_t c_input_command = 0;
+const int16_t c_join_game_command = 2;
 int message_number = 0;
 
 uint currentFrame = 0;
@@ -26,17 +28,18 @@ std::queue<command_t> commandQueue;
 pthread_mutex_t commandQueueMutex;
 
 std::vector<Player> players;
+std::map<const char*, int16_t> player_ips;
 //std::map<int32_t, Projectile[]> projectilesInMessage;
 
-const char* serverIP = "127.0.0.1";
+const char* serverIP = "192.168.1.9";
 
 
 void init()
 {
     nextProjectileId = 0;
     pthread_mutex_init(&commandQueueMutex, NULL);
-    players.push_back(Player(0, serverIP, 50421, sf::Vector2f(20.0f,20.0f)));
-    players.push_back(Player(1, "192.168.2.2", 50421, sf::Vector2f(10.0f,10.0f)));
+    /*players.push_back(Player(0, "192.168.2.2", 50421, sf::Vector2f(20.0f,20.0f)));
+    players.push_back(Player(1, "192.168.2.2", 50421, sf::Vector2f(10.0f,10.0f)));*/
     //players.push_back(Player(2, "127.0.0.1", 50421, sf::Vector2f(40.0f,0.0f)));
 }
 
@@ -66,17 +69,26 @@ void *listenToClients(void * args)
 
     while(1)
     {
-        nBytes = recvfrom(udpSocket, buffer, COMMAND_BUFFER_SIZE, 0, (struct sockaddr *)&serverStorage, &addr_size);
+
+        int16_t commandType;
+        nBytes = recvfrom(udpSocket, buffer, COMMAND_BUFFER_SIZE, 0, (struct sockaddr *)&clientAddr, &addr_size);
+        Serialization::charsToShort(buffer, commandType, 0);
         command_t command;
-        Serialization::charsToShort(buffer, command.commandType, 0);
-        Serialization::charsToShort(buffer, command.playerId, 2);
-        Serialization::charsToInt(buffer, command.msgNum, 4);
-        Serialization::charsToInt(buffer, command.controls, 8);
-        Serialization::charsToFloat(buffer, command.rotation, 12);
-        /*printf("commandType: %i ", command.commandType);
-        printf("playerId: %i ", command.playerId);
-        printf("msgNum: %i ", command.msgNum);
-        printf("keys: %04x\n", command.controls);*/
+        command.commandType = commandType;
+
+        if (commandType == c_input_command)
+        {
+            printf("Receiving controls\n");
+            Serialization::charsToShort(buffer, command.playerId, 2);
+            Serialization::charsToInt(buffer, command.msgNum, 4);
+            Serialization::charsToInt(buffer, command.controls, 8);
+            Serialization::charsToFloat(buffer, command.rotation, 12);
+        }
+        else if (commandType == c_join_game_command)
+        {
+            printf("received join command\n");
+            command.client_ip = inet_ntoa(clientAddr.sin_addr);
+        }
 
         pthread_mutex_lock(&commandQueueMutex);
         commandQueue.push(command);
@@ -88,6 +100,7 @@ void *listenToClients(void * args)
 
 void update(sf::Time elapsedTime)
 {
+
     for (auto &player : players)
     {
         player.update(elapsedTime);
@@ -126,6 +139,7 @@ void update(sf::Time elapsedTime)
     //Maybe move this to another thread?
     for (auto &player : players)
     {
+
         player.send(outbuffer, pos);
 
         if (projectile_pos > 10)
@@ -133,20 +147,53 @@ void update(sf::Time elapsedTime)
             player.send(projectiles, projectile_pos);
         }
 
+        if (player.hasNotAckedId)
+        {
+            printf("has not acked \n");
+            char playerIdBuffer[100];
+            size_t pId_pos = 0;
+
+            Serialization::intToChars(message_number++, playerIdBuffer, pId_pos);
+            pId_pos += 4;
+            Serialization::shortToChars(s_player_id_command, playerIdBuffer, pId_pos);
+            pId_pos += 2;
+            Serialization::shortToChars(player.playerId, playerIdBuffer, pId_pos);
+            pId_pos += 2;
+
+            player.send(playerIdBuffer, pId_pos);
+        }
+
     }
 }
 
 void processEvents()
 {
-
     pthread_mutex_lock(&commandQueueMutex);
     while (!commandQueue.empty())
     {
         command_t command = commandQueue.front();
         commandQueue.pop();
 
-        players[command.playerId].controls = command.controls;
-        players[command.playerId].rotation = command.rotation;
+        if (command.commandType == c_input_command && command.playerId != -1 && players.size() >= command.playerId)
+        {
+            printf("Processing controls\n");
+            players[command.playerId].controls = command.controls;
+            players[command.playerId].rotation = command.rotation;
+            players[command.playerId].hasNotAckedId = false;
+        }
+        else if (command.commandType == c_join_game_command)
+        {
+            printf("Processing join request\n");
+            auto it = player_ips.find(command.client_ip);
+            if (it == player_ips.end())
+            {
+                auto new_player_id = (int16_t)players.size();
+                player_ips[command.client_ip] = new_player_id;
+                Player newPlayer(new_player_id, command.client_ip, 50421, sf::Vector2f(20.0f,20.0f));
+                players.push_back(newPlayer);
+                printf("Inserted player %d\n", new_player_id);
+            }
+        }
     }
     pthread_mutex_unlock(&commandQueueMutex);
 
@@ -170,11 +217,8 @@ int main()
             timeSinceLastUpdate -= TimePerFrame;
             processEvents();
             update(TimePerFrame);
-
         }
-
     }
 
     pthread_join(listeningThread, NULL);
-
 }

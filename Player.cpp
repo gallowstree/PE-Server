@@ -106,7 +106,6 @@ void Player::update(sf::Time elapsedTime)
         {
             timeSinceLastShot = sf::Time::Zero;
             projectiles.push_back(Projectile(this->position, 800, this->rotation, 700, 0));
-            printf("bang!\n");
         }
     }
 

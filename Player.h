@@ -24,6 +24,7 @@ public:
     const int16_t playerId;
     int lastMsgNum;
     std::map<int32_t, reliable_message_t> reliable_queue;
+    bool hasNotAckedId = true;
 
 
     //Physics

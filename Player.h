@@ -11,9 +11,10 @@
 #include <netinet/in.h>
 #include "Projectile.h"
 #include "reliable_message.h"
+#include "Entity.h"
 
 
-class Player
+class Player : public Entity
 {
 public:
     //Socket
@@ -28,10 +29,11 @@ public:
 
 
     //Physics
-    float speed = 500;
-    float rotation = 0;
-    sf::Vector2f position;
-    sf::Vector2f velocity;
+    float speed;
+    float rotation;
+    float cross_thickness;
+    sf::FloatRect vert_rect;
+    sf::FloatRect horz_rect;
 
     //Events
     int controls = 0;
@@ -44,6 +46,7 @@ public:
     void update(sf::Time elapsedTime);
 
     int serialize(char *buffer, int position);
+    void intersectedWith(Entity *other, sf::FloatRect intersection);
 
 private:
     int udpSocket;
@@ -54,6 +57,13 @@ private:
 
 
     void initSocket();
+
+    void updateMovement(sf::Time elapsedTime);
+
+    void updateProjectiles(sf::Time elapsedTime);
+
+    void updateCross();
+
 
 };
 

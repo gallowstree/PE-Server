@@ -11,9 +11,13 @@
 #include "Player.h"
 #include "command.h"
 #include "Projectile.h"
+#include "Wall.h"
+#include "Area.h"
 #include <unistd.h>
+#include <fstream>
 
-const sf::Time TimePerFrame = sf::seconds(1.f/50.f);
+const sf::Time TimePerFrame = sf::seconds(1.f/120.f);
+const sf::Time TimePerNetworkUpdate = sf::seconds(1.f/30.f);
 const ushort COMMAND_BUFFER_SIZE = 1024;
 
 const int16_t s_players_command = 0;
@@ -31,15 +35,26 @@ std::vector<Player> players;
 std::map<const char*, int16_t> player_ips;
 //std::map<int32_t, Projectile[]> projectilesInMessage;
 
-const char* serverIP = "192.168.1.9";
+const char* serverIP = "192.168.1.32";
+std::vector<Area*> areas;
+std::vector<const char *> maps = {"maps/level1.txt","maps/level2.txt"};
+//Every position in the first vector represents an area (area 0, 1, ..., n)
+//Every vector in each position has references to every object in the area
+std::vector<std::vector<Entity*>> static_objects;
+
+std::vector<Entity> world_entities;
 
 
+
+void networkUpdate();
 
 void init()
 {
     nextProjectileId = 0;
     pthread_mutex_init(&commandQueueMutex, NULL);
 }
+
+
 
 
 void *listenToClients(void * args)
@@ -96,14 +111,50 @@ void *listenToClients(void * args)
     return 0;
 }
 
+
+std::vector<int16_t> areasForEntity(const Entity &entity)
+{
+    std::vector<int16_t> found;
+
+    int i = 0;
+    for (auto &area : areas)
+    {
+
+        if (area->rect.intersects(entity.boundingBox))
+        {
+            found.push_back(i);
+            //printf("%i ",i);
+        }
+
+        i++;
+    }
+    //printf("\n");
+    return found;
+}
+
 void update(sf::Time elapsedTime)
 {
-
     for (auto &player : players)
     {
         player.update(elapsedTime);
-    }
 
+        for (auto& area: areasForEntity(player))
+        {
+            for (auto& other_entity : static_objects[area])
+            {
+                sf::FloatRect intersection;
+
+                if (other_entity->boundingBox.intersects(player.boundingBox, intersection))
+                {
+                    player.intersectedWith(other_entity, intersection);
+                }
+            }
+        }
+    }
+}
+
+void networkUpdate()
+{
     char outbuffer[512];
     char projectiles[1500];
 
@@ -188,6 +239,8 @@ void processEvents()
                 auto new_player_id = (int16_t)players.size();
                 player_ips[command.client_ip] = new_player_id;
                 Player newPlayer(new_player_id, command.client_ip, 50421, sf::Vector2f(20.0f,20.0f));
+
+                newPlayer.movementBounds = sf::FloatRect(0.0f, 0.0f, 2400.0f, 2400.0f);
                 players.push_back(newPlayer);
                 printf("Inserted player %d\n", new_player_id);
             }
@@ -197,24 +250,107 @@ void processEvents()
 
 }
 
+
+int parseMapParameter(std::string & line)
+{
+    auto commaPos = line.find(',');
+    char * parameter = (char *)malloc((commaPos+1)*sizeof(char));
+    strcpy(parameter,line.substr(0,commaPos).c_str());
+    line.erase(0, line.find(',') + 1);
+    int value = atoi(parameter);
+    free(parameter);
+    return value;
+}
+
+void readMap(int map)
+{
+    std::ifstream mapFile(maps[map]);
+    std::string line;
+
+    while (std::getline(mapFile, line))
+    {
+        int objectType = parseMapParameter(line);
+        int left =  parseMapParameter(line);
+        int top =  parseMapParameter(line);
+        int width =   parseMapParameter(line);
+        int height =  atoi(line.c_str());
+
+        if (objectType == 0) //wall
+            world_entities.push_back(Wall(left, top, width, height));
+
+    }
+}
+void createStaticObjects()
+{
+
+
+    readMap(0);
+
+    for (auto& entity : world_entities)
+    {
+        if (entity.isStatic)
+        {
+            for (auto& area : areasForEntity(entity))
+            {
+                static_objects[area].push_back(&entity);
+            }
+        }
+    }
+
+}
+
+void initWorld()
+{
+    int noAreasX = 0;
+    int noAreasY = 0;
+
+    float area_size = 400;
+    sf::FloatRect bounds(0,0, 2400, 2400);
+
+    noAreasX = bounds.width / area_size;
+    noAreasY = bounds.height / area_size;
+
+    for (int x = 0; x < noAreasX; x++)
+    {
+        for (int y = 0; y < noAreasY; y++)
+        {
+            Area* newArea = new Area(x*area_size, y*area_size, area_size, area_size);
+            areas.push_back(newArea);
+            static_objects.push_back(std::vector<Entity*>());
+        }
+    }
+
+    createStaticObjects();
+
+}
+
 int main()
 {
     init();
+    initWorld();
     pthread_t listeningThread;
     pthread_create(&listeningThread, NULL, listenToClients, NULL);
 
     sf::Clock clock;
     sf::Time timeSinceLastUpdate = sf::Time::Zero;
+    sf::Time timeSinceLastNetworkUpdate = sf::Time::Zero;
     while (true)
     {
         sf::Time elapsedTime = clock.restart();
         timeSinceLastUpdate += elapsedTime;
+        timeSinceLastNetworkUpdate += elapsedTime;
         while (timeSinceLastUpdate > TimePerFrame)
         {
             currentFrame++;
             timeSinceLastUpdate -= TimePerFrame;
             processEvents();
             update(TimePerFrame);
+        }
+
+        while (timeSinceLastNetworkUpdate > TimePerNetworkUpdate)
+        {
+            timeSinceLastNetworkUpdate -= TimePerNetworkUpdate;
+            networkUpdate();
         }
     }
 

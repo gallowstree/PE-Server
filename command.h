@@ -12,7 +12,7 @@ typedef struct commamd
     int msgNum;
     int controls;
     float rotation;
-    char *client_ip;
+    const char * client_ip;
 } command_t;
 
 

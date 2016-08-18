@@ -6,7 +6,7 @@
 #include "Player.h"
 #include "serialization.h"
 #include <string.h>
-
+#include <math.h>
 
 
 Player::Player(int16_t playerId, const char* ip, int port, sf::Vector2f position) :
@@ -17,7 +17,8 @@ timeSinceLastShot(sf::Time::Zero),
 speed(500),
 rotation(0),
 cross_thickness(5),
-port(port)
+port(port),
+gun_origin(33.0f, 15.0f)
 {
     boundingBox = BoundingBox(position.x, position.y, 50, 50);
     updateCross();
@@ -121,7 +122,11 @@ void Player::updateProjectiles(sf::Time elapsedTime)
         if(timeSinceLastShot.asMilliseconds() > 20)
         {
             timeSinceLastShot = sf::Time::Zero;
-            projectiles.push_back(Projectile(this->boundingBox.getPosition(), 800, this->rotation, 700, 0));
+
+            auto pos = this->boundingBox.getPosition() + sf::Vector2f(boundingBox.width /2, boundingBox.height / 2);
+
+
+            projectiles.push_back(Projectile(pos, 800, this->rotation, 700, 0));
         }
     }
 }

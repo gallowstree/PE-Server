@@ -34,7 +34,7 @@ pthread_mutex_t commandQueueMutex;
 std::vector<Player> players;
 //std::map<int32_t, Projectile[]> projectilesInMessage;
 
-const char* serverIP = "192.168.1.32";
+const char* serverIP = "127.0.0.1";
 std::vector<Area*> areas;
 std::vector<const char *> maps = {"maps/level1.txt","maps/level2.txt"};
 //Every position in the first vector represents an area (area 0, 1, ..., n)

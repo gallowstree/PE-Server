@@ -18,7 +18,7 @@ projectileId(nextProjectileId),
 projectileType(type)
 {
     nextProjectileId++;
-    update(sf::seconds(0.03));
+    update(sf::seconds(0.01));
 }
 
 void Projectile::update(sf::Time elapsedTime)

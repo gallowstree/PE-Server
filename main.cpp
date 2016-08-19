@@ -13,6 +13,7 @@
 #include "Projectile.h"
 #include "Wall.h"
 #include "Area.h"
+#include "Game.h"
 #include <unistd.h>
 #include <fstream>
 #include <algorithm>
@@ -36,16 +37,13 @@ std::vector<Player> players;
 std::map<int32_t, std::vector<Projectile*>> projectilesInMessage;
 std::map<int32_t, std::vector<int16_t>> pendingMessageAcks;
 
-const char* serverIP = "192.168.43.14";
+const char* serverIP = "127.0.0.1";
 std::vector<Area*> areas;
 std::vector<const char *> maps = {"maps/level1.txt","maps/level2.txt"};
 //Every position in the first vector represents an area (area 0, 1, ..., n)
 //Every vector in each position has references to every object in the area
 std::vector<std::vector<Entity*>> static_objects;
-
-
 std::vector<Entity> world_entities;
-
 
 
 void networkUpdate();
@@ -278,13 +276,11 @@ void processEvents()
 
             if (command.numberOfAcks > 0)
             {
-                //delete[](command.messageAcks);
+                delete[](command.messageAcks);
             }
         }
         else if (command.commandType == c_join_game_command)
         {
-
-
             int16_t playerIndex = -1;
             for(auto &player : players)
             {

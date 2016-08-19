@@ -34,7 +34,6 @@ public:
     float cross_thickness;
     sf::FloatRect vert_rect;
     sf::FloatRect horz_rect;
-    sf::Vector2f gun_origin;
 
     //Events
     int controls = 0;

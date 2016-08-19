@@ -14,6 +14,7 @@ rect(sf::Vector2f(6,6)),
 range(range),
 origin(position),
 valid(true),
+acked(false),
 projectileId(nextProjectileId),
 projectileType(type)
 {

@@ -17,8 +17,7 @@ timeSinceLastShot(sf::Time::Zero),
 speed(500),
 rotation(0),
 cross_thickness(5),
-port(port),
-gun_origin(33.0f, 15.0f)
+port(port)
 {
     boundingBox = BoundingBox(position.x, position.y, 50, 50);
     updateCross();
@@ -119,13 +118,11 @@ void Player::updateProjectiles(sf::Time elapsedTime)
 
     if (controls & 0x10)
     {
-        if(timeSinceLastShot.asMilliseconds() > 20)
+        if(timeSinceLastShot.asMilliseconds() > 150)
         {
             timeSinceLastShot = sf::Time::Zero;
 
             auto pos = this->boundingBox.getPosition() + sf::Vector2f(boundingBox.width /2, boundingBox.height / 2);
-
-
             projectiles.push_back(Projectile(pos, 800, this->rotation, 700, 0));
         }
     }

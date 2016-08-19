@@ -23,6 +23,7 @@ class Projectile {
         int16_t playerId;
         int16_t projectileId;
         bool valid;
+        bool acked;
 
 
 

@@ -13,6 +13,8 @@ typedef struct commamd
     int controls;
     float rotation;
     const char * client_ip;
+    int numberOfAcks;
+    int32_t *messageAcks;
 } command_t;
 
 

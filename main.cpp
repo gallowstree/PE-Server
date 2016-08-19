@@ -15,6 +15,7 @@
 #include "Area.h"
 #include <unistd.h>
 #include <fstream>
+#include <algorithm>
 
 const sf::Time TimePerFrame = sf::seconds(1.f/120.f);
 const sf::Time TimePerNetworkUpdate = sf::seconds(1.f/30.f);
@@ -32,9 +33,10 @@ std::queue<command_t> commandQueue;
 pthread_mutex_t commandQueueMutex;
 
 std::vector<Player> players;
-//std::map<int32_t, Projectile[]> projectilesInMessage;
+std::map<int32_t, std::vector<Projectile*>> projectilesInMessage;
+std::map<int32_t, std::vector<int16_t>> pendingMessageAcks;
 
-const char* serverIP = "127.0.0.1";
+const char* serverIP = "192.168.43.14";
 std::vector<Area*> areas;
 std::vector<const char *> maps = {"maps/level1.txt","maps/level2.txt"};
 //Every position in the first vector represents an area (area 0, 1, ..., n)
@@ -95,11 +97,23 @@ void *listenToClients(void * args)
             Serialization::charsToInt(buffer, command.msgNum, 4);
             Serialization::charsToInt(buffer, command.controls, 8);
             Serialization::charsToFloat(buffer, command.rotation, 12);
+            Serialization::charsToInt(buffer, command.numberOfAcks, 16);
+
+            size_t ack_pos = 20;
+            if (command.numberOfAcks > 0)
+            {
+                command.messageAcks = new int[command.numberOfAcks];//(int32_t *) malloc(sizeof(int32_t) * command.numberOfAcks);
+                for (int i = 0; i < command.numberOfAcks; i++)
+                {
+                    Serialization::charsToInt(buffer, command.messageAcks[i], ack_pos);
+                    ack_pos += 4;
+                }
+            }
+
         }
         else if (commandType == c_join_game_command)
         {
             command.client_ip = inet_ntoa(clientAddr.sin_addr);
-            printf("cliente hueco: %s ip\n",command.client_ip);
         }
 
         pthread_mutex_lock(&commandQueueMutex);
@@ -163,7 +177,8 @@ void networkUpdate()
     Serialization::shortToChars(s_players_command, outbuffer, pos); //Command type 4 - 5
     pos += 2;
 
-    Serialization::intToChars(message_number++, projectiles, projectile_pos);
+    const auto projectile_msgno = message_number++;
+    Serialization::intToChars(projectile_msgno, projectiles, projectile_pos);
     projectile_pos += 4;
     Serialization::intToChars(s_projectiles_command, projectiles, projectile_pos);
     projectile_pos += 2;
@@ -174,7 +189,16 @@ void networkUpdate()
 
         for (auto &projectile : player.projectiles)
         {
-            projectile_pos += projectile.serialize(projectiles, projectile_pos);
+            if (projectile.valid && !projectile.acked)
+            {
+                projectile_pos += projectile.serialize(projectiles, projectile_pos);
+                if (projectilesInMessage.count(projectile_msgno) == 0)
+                {
+                    projectilesInMessage[projectile_msgno] = std::vector<Projectile*>();
+                }
+                projectilesInMessage[projectile_msgno].push_back(&projectile);
+            }
+
         }
     }
 
@@ -187,12 +211,15 @@ void networkUpdate()
     //Maybe move this to another thread?
     for (auto &player : players)
     {
-
         player.send(outbuffer, pos);
-
         if (projectile_pos > 10)
         {
             player.send(projectiles, projectile_pos);
+            if (pendingMessageAcks.count(projectile_msgno) == 0)
+            {
+                pendingMessageAcks[projectile_msgno] = std::vector<int16_t >();
+            }
+            pendingMessageAcks[projectile_msgno].push_back(player.playerId);
         }
 
         if (player.hasNotAckedId)
@@ -227,6 +254,32 @@ void processEvents()
             players[command.playerId].controls = command.controls;
             players[command.playerId].rotation = command.rotation;
             players[command.playerId].hasNotAckedId = false;
+
+            for (int i = 0; i < command.numberOfAcks; i++)
+            {
+                auto ack = command.messageAcks[i];
+                auto pending = pendingMessageAcks[ack];
+                pending.erase(std::remove(pending.begin(), pending.end(), command.playerId), pending.end());
+
+                if (pending.size() == 0)
+                {
+                    pendingMessageAcks.erase(ack);
+                    if (projectilesInMessage.count(ack) > 0)
+                    {
+                        for (auto &p : projectilesInMessage[ack])
+                        {
+                            if (p != nullptr)
+                                p->acked = true;
+                        }
+                        projectilesInMessage.erase(ack);
+                    }
+                }
+            }
+
+            if (command.numberOfAcks > 0)
+            {
+                //delete[](command.messageAcks);
+            }
         }
         else if (command.commandType == c_join_game_command)
         {

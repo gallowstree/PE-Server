@@ -25,7 +25,7 @@ public:
     static int16_t lastId;
     BoundingBox boundingBox;
     sf::FloatRect movementBounds;
-    int16_t id;
+    int16_t entityId;
     bool isStatic;
     EntityType type;
 

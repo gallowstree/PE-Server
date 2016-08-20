@@ -39,7 +39,6 @@ void ServerSocket::run()
 
     while(1)
     {
-
         int16_t commandType;
         nBytes = recvfrom(udpSocket, buffer, COMMAND_BUFFER_SIZE, 0, (struct sockaddr *)&clientAddr, &addr_size);
 
@@ -49,6 +48,13 @@ void ServerSocket::run()
         }
     }
 }
+
+void *ServerSocket::runThread(void *serverSocket) {
+    ((ServerSocket*) serverSocket)->run();
+    return nullptr;
+}
+
+
 
 
 

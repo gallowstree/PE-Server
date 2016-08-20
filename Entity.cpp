@@ -8,9 +8,9 @@ int16_t Entity::lastId;
 
 Entity::Entity() :
 boundingBox(),
-id(-1)
+entityId(-1)
 {
-    id = Entity::lastId++;
+    entityId = Entity::lastId++;
 }
 
 void Entity::intersectedWith(Entity *other, sf::FloatRect intersection)

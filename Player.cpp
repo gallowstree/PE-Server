@@ -24,6 +24,7 @@ port(port)
     initSocket();
     horz_rect.width = boundingBox.width;
     vert_rect.height = boundingBox.height;
+    type = EntityType::Player_T;
 }
 
 void Player::initSocket()
@@ -94,6 +95,8 @@ void Player::updateMovement(sf::Time elapsedTime)
     boundingBox.top += movement.y;
     boundingBox.left += movement.x;
     updateCross();
+
+    printf("%f, %f\\n", boundingBox.height, boundingBox.width);
 
     //position += movement * elapsedTime.asSeconds();
 }

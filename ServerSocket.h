@@ -20,6 +20,9 @@ class ServerSocket
 public:
     ServerSocket(const char* ip, int port, SocketListener* listener);
     void run();
+
+    static void * runThread(void * serverSocket);
+
 private:
     SocketListener* listener;
     const char *ip;

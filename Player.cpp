@@ -66,7 +66,6 @@ void Player::send(const char *outbuffer, size_t size, int32_t reliableId)
         reliable_queue[reliableId] = message;
     }
 
-
     for (auto const& message: reliable_queue)
     {
         if (message.first != reliableId)
@@ -92,13 +91,9 @@ void Player::updateMovement(sf::Time elapsedTime)
         movement.x += speed;
 
     movement *= elapsedTime.asSeconds();
-    boundingBox.top += movement.y;
     boundingBox.left += movement.x;
+    boundingBox.top += movement.y;
     updateCross();
-
-    printf("%f, %f\\n", boundingBox.height, boundingBox.width);
-
-    //position += movement * elapsedTime.asSeconds();
 }
 
 void Player::updateProjectiles(sf::Time elapsedTime)
@@ -134,10 +129,7 @@ void Player::updateProjectiles(sf::Time elapsedTime)
 void Player::update(sf::Time elapsedTime)
 {
     updateMovement(elapsedTime);
-
     updateProjectiles(elapsedTime);
-
-    //printf("player %i has %i projectiles \n", playerId, projectiles.size());
 }
 
 //Escribe la data del player al array de bytes en la posición indicada
@@ -179,13 +171,10 @@ void Player::intersectedWith(Entity* other, sf::FloatRect intersection)
             if (intersection.top > boundingBox.top + boundingBox.height / 2)
             {
                 boundingBox.top -= intersection.height;
-                printf("resolving\n");
             }
-
             if (intersection.top < boundingBox.top + boundingBox.height / 2)
             {
                 boundingBox.top += intersection.height;
-                printf("resolving\n");
             }
         }
 
@@ -194,13 +183,10 @@ void Player::intersectedWith(Entity* other, sf::FloatRect intersection)
             if (intersection.left < boundingBox.left + boundingBox.width / 2)
             {
                 boundingBox.left += intersection.width;
-                printf("resolving\n");
             }
-
             if (intersection.left > boundingBox.left + boundingBox.width / 2)
             {
                 boundingBox.left -= intersection.width;
-                printf("resolving\n");
             }
         }
         updateCross();

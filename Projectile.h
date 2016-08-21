@@ -6,11 +6,13 @@
 #define TEST_SERVER_PROJECTILE_H
 
 #include <SFML/Graphics.hpp>
+#include "Entity.h"
 
 static int16_t nextProjectileId;
 
-class Projectile {
-    sf::Vector2f position;
+class Projectile : public Entity
+{
+    //sf::Vector2f position;
     sf::Vector2f origin;
     sf::Vector2f velocity;
     float speed = 500;
@@ -32,6 +34,8 @@ class Projectile {
         int serialize(char *buffer, int position);
 
         int16_t projectileType;
+
+    void intersectedWith(Entity *other, sf::FloatRect intersection);
 };
 
 

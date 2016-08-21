@@ -37,7 +37,6 @@ void World::readMap(const char *name)
         int width =   parseMapParameter(line);
         int height =  atoi(line.c_str());
 
-        printf("%f,%f,%f,%f,\n",left,top,width,height);
         if (objectType == 0) //wall
             world_entities.push_back(Wall(left, top, width, height));
     }
@@ -119,7 +118,26 @@ void World::update(sf::Time elapsedTime)
                 }
             }
         }
+
+        for (auto &proj : player.projectiles)
+        {
+            if (!proj.valid) continue;
+            for (auto& area: areasForEntity(proj))
+            {
+                for (auto& other_entity : static_entities[area])
+                {
+                    sf::FloatRect intersection;
+                    if (other_entity->boundingBox.intersects(player.boundingBox, intersection))
+                    {
+                        proj.intersectedWith(other_entity, intersection);
+                        printf("SEXO!\n");
+                    }
+                }
+            }
+        }
     }
+
+    //for (int i = 0; i < pl)
 }
 
 

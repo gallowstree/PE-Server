@@ -223,7 +223,6 @@ void Game::networkUpdate()
 
         if (player.hasNotAckedId)
         {
-            printf("has not acked \n");
             char playerIdBuffer[100];
             size_t pId_pos = 0;
 

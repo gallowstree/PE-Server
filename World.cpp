@@ -5,6 +5,7 @@
 #include <fstream>
 #include "World.h"
 #include "Wall.h"
+#include <string.h>
 
 World::World()
 {
@@ -19,31 +20,7 @@ void World::init(const char *mapName, std::vector<Player> *players)
     populateStaticEntities();
 }
 
-void World::readMap(const char *name)
-{
-    std::ifstream mapFile(name);
-    std::string line;
-
-    std::getline(mapFile, line);
-    bounds.width = parseMapParameter(line);
-    bounds.height = parseMapParameter(line);
-    area_size = 400;
-
-    while (std::getline(mapFile, line))
-    {
-        int objectType = parseMapParameter(line);
-        int left =  parseMapParameter(line);
-        int top =  parseMapParameter(line);
-        int width =   parseMapParameter(line);
-        int height =  atoi(line.c_str());
-
-        printf("%f,%f,%f,%f,\n",left,top,width,height);
-        if (objectType == 0) //wall
-            world_entities.push_back(Wall(left, top, width, height));
-    }
-}
-
-int World::parseMapParameter(std::string line)
+int World::parseMapParameter(std::string & line)
 {
     auto commaPos = line.find(',');
     char * parameter = (char *)malloc((commaPos+1)*sizeof(char));
@@ -53,6 +30,32 @@ int World::parseMapParameter(std::string line)
     free(parameter);
     return value;
 }
+
+void World::readMap(const char *name)
+{
+    std::ifstream mapFile(name);
+    std::string line = "";
+
+    std::getline(mapFile, line);
+    bounds.width = this->parseMapParameter(line);
+    bounds.height = this->parseMapParameter(line);
+    area_size = atoi(line.c_str());
+
+
+    while (std::getline(mapFile, line))
+    {
+        int objectType = parseMapParameter(line);
+        int left =  parseMapParameter(line);
+        int top =  parseMapParameter(line);
+        int width =   parseMapParameter(line);
+        int height =  atoi(line.c_str());
+
+        printf("%d,%d,%d,%d,\n",left,top,width,height);
+        if (objectType == 0) //wall
+            world_entities.push_back(Wall(left, top, width, height));
+    }
+}
+
 
 void World::populateStaticEntities()
 {

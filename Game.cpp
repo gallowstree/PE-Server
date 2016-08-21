@@ -44,6 +44,7 @@ Game::Game() :
     TimePerNetworkUpdate(sf::seconds(1/30.0f)),
     world()
 {
+    pthread_mutex_init(&commandQueueMutex, NULL);
     reset();
 }
 
@@ -70,9 +71,11 @@ void Game::receiveMessage(char *buffer, size_t nBytes, sockaddr_in *clientAddr)
 
 void Game::reset()
 {
+
     pthread_mutex_lock(&commandQueueMutex);
     std::queue<command_t>().swap(commandQueue);
     players.clear();
+
     world.init("maps/level1.txt", &players);
     message_number = 0;
     currentFrame = 0;

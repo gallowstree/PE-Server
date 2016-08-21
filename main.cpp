@@ -1,10 +1,12 @@
 #include <stdio.h>
+#include <pthread.h>
 #include <sys/socket.h>
 #include <SFML/Graphics.hpp>
 #include "Game.h"
 
 int main()
 {
+
     Game g;
     ServerSocket s("127.0.0.1", 50420, &g);
 
@@ -14,6 +16,5 @@ int main()
     g.run();
 
     pthread_join(listening_thread, nullptr);
-
     return 0;
 }

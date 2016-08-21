@@ -33,7 +33,7 @@ private:
 
     void readMap(const char *name);
 
-    int parseMapParameter(std::string line);
+    int parseMapParameter(std::string & line);
 
     void populateStaticEntities();
 

@@ -5,6 +5,8 @@
 #include <arpa/inet.h>
 #include <cstring>
 #include "ServerSocket.h"
+#include <stdio.h>
+#include <errno.h>
 
 ServerSocket::ServerSocket(const char *ip, int port, SocketListener *listener) :
 ip(ip),
@@ -34,6 +36,7 @@ void ServerSocket::run()
     /*Bind socket with address struct*/
     bind(udpSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
 
+    printf("%d",strerror(errno));
     /*Initialize size variable to be used later on*/
     addr_size = sizeof clientAddr;
 

@@ -5,6 +5,7 @@
 #include <fstream>
 #include "World.h"
 #include "Wall.h"
+#include <string.h>
 
 World::World()
 {
@@ -19,15 +20,27 @@ void World::init(const char *mapName, std::vector<Player> *players)
     populateStaticEntities();
 }
 
+int World::parseMapParameter(std::string & line)
+{
+    auto commaPos = line.find(',');
+    char * parameter = (char *)malloc((commaPos+1)*sizeof(char));
+    strcpy(parameter,line.substr(0,commaPos).c_str());
+    line.erase(0, line.find(',') + 1);
+    int value = atoi(parameter);
+    free(parameter);
+    return value;
+}
+
 void World::readMap(const char *name)
 {
     std::ifstream mapFile(name);
-    std::string line;
+    std::string line = "";
 
     std::getline(mapFile, line);
-    bounds.width = parseMapParameter(line);
-    bounds.height = parseMapParameter(line);
-    area_size = 400;
+    bounds.width = this->parseMapParameter(line);
+    bounds.height = this->parseMapParameter(line);
+    area_size = atoi(line.c_str());
+
 
     while (std::getline(mapFile, line))
     {
@@ -42,16 +55,6 @@ void World::readMap(const char *name)
     }
 }
 
-int World::parseMapParameter(std::string line)
-{
-    auto commaPos = line.find(',');
-    char * parameter = (char *)malloc((commaPos+1)*sizeof(char));
-    strcpy(parameter,line.substr(0,commaPos).c_str());
-    line.erase(0, line.find(',') + 1);
-    int value = atoi(parameter);
-    free(parameter);
-    return value;
-}
 
 void World::populateStaticEntities()
 {

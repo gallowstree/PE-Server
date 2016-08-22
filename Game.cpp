@@ -124,7 +124,7 @@ void Game::processJoinCmd(const command_t &command)
         strcpy(c_ip,command.client_ip);
 
         Player newPlayer(new_player_id, sf::Vector2f(20.0f, 20.0f), OutputSocket(c_ip, 50421), command.team);
-
+        printf("command team %i\n", command.team);
         deleteFromLobby(command.client_ip);
 
         newPlayer.movementBounds = sf::FloatRect(0.0f, 0.0f, world.bounds.width, world.bounds.height);
@@ -269,10 +269,12 @@ void Game::processInfoCommand(command_t& command)
 
     if (player != nullptr)
     {
+        printf("a\n");
         sendGameInfo(player->socket);
     }
     else if (players.size() + inLobby.size() < maxPlayers)
     {
+        printf("b\n");
         player = new lobbyPlayer_t;
         player->socket = new OutputSocket(command.client_ip, 50421);
         player->timeLeft = sf::seconds(30);
@@ -317,12 +319,14 @@ int Game::findLobbyPlayer(const char * ip, lobbyPlayer_t* &found)
 
 void Game::sendGameInfo(const OutputSocket* socket)
 {
+    printf("c\n");
     char out[6];
     Serialization::shortToChars(1, out, 0);
     Serialization::shortToChars(1, out, 2);
     Serialization::shortToChars(2, out, 4);
 
     socket->send(out, 6);
+    printf("d\n");
 }
 
 void Game::deleteFromLobby(const char *ip)
@@ -342,16 +346,20 @@ bool Game::checkForWinner()
     int team0_alive = 0;
     int team1_alive = 0;
 
+
     for (auto& player : players)
     {
-        if (player.health > 0)
+        if (player.getTeam() == 0)
         {
-            if (player.getTeam() == 0) team0_alive++;
-            else if (player.getTeam() == 1) team1_alive++;
+            if (player.health > 0) team0_alive++;
+        }
+        else if (player.getTeam() == 1)
+        {
+            if (player.health > 0) team1_alive++;
         }
     }
 
-    return team0_alive == 0 || team1_alive == 0;
+    return false;
 }
 
 

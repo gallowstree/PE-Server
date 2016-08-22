@@ -17,6 +17,7 @@ rotation(0),
 cross_thickness(5),
 socket(socket),
 health(100),
+playerInfo(0),
 ip(socket.ip)
 {
     boundingBox = BoundingBox(position.x, position.y, 50, 50);
@@ -95,6 +96,9 @@ void Player::update(sf::Time elapsedTime)
 int Player::serialize(char * buffer, int position)
 {
     int pos = position;
+
+    printf("%i, %i\n", playerId, playerInfo);
+
     Serialization::shortToChars(this->playerId | this->playerInfo, buffer, pos); //Player id 6 - 7
     pos += 2;
     Serialization::floatToChars(this->boundingBox.getPosition().x, buffer, pos); //Pos x 8 - 12

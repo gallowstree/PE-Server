@@ -4,6 +4,8 @@
 
 #include <arpa/inet.h>
 #include <cstring>
+#include <cstdio>
+#include <errno.h>
 #include "OutputSocket.h"
 
 OutputSocket::OutputSocket(const char *ip, int port) :

@@ -6,6 +6,7 @@
 #include "World.h"
 #include "Wall.h"
 #include <string.h>
+#include <cmath>
 
 World::World()
 {
@@ -14,10 +15,11 @@ World::World()
 
 void World::init(const char *mapName, std::vector<Player> *players)
 {
+    reset();
     this->players = players;
     readMap(mapName);
     createAreas();
-    populateStaticEntities();
+    indexStaticEntities();
 }
 
 int World::parseMapParameter(std::string & line)
@@ -40,7 +42,7 @@ void World::readMap(const char *name)
     bounds.width = this->parseMapParameter(line);
     bounds.height = this->parseMapParameter(line);
     area_size = atoi(line.c_str());
-
+    printf("w:%f,h:%f,as:%f", bounds.width, bounds.height, area_size);
 
     while (std::getline(mapFile, line))
     {
@@ -56,7 +58,7 @@ void World::readMap(const char *name)
 }
 
 
-void World::populateStaticEntities()
+void World::indexStaticEntities()
 {
     for (auto& entity : world_entities)
     {
@@ -72,9 +74,8 @@ void World::populateStaticEntities()
 
 void World::createAreas()
 {
-    int noAreasX = 0;
-    int noAreasY = 0;
-
+    noAreasX = 0;
+    noAreasY = 0;
     noAreasX = bounds.width / area_size;
     noAreasY = bounds.height / area_size;
 
@@ -82,9 +83,10 @@ void World::createAreas()
     {
         for (int y = 0; y < noAreasY; y++)
         {
-            Area* newArea = new Area(x*area_size, y*area_size, area_size, area_size);
+            Area* newArea = new Area(y*area_size, x*area_size, area_size, area_size);
             areas.push_back(newArea);
             static_entities.push_back(std::vector<Entity*>());
+            moving_entities.push_back(std::vector<Entity*>());
         }
     }
 }
@@ -92,6 +94,15 @@ void World::createAreas()
 std::vector<int16_t> World::areasForEntity(const Entity &entity)
 {
     std::vector<int16_t> found;
+    int x = static_cast<int>(std::floor(entity.boundingBox.left / area_size));
+    int y = static_cast<int>(std::floor(entity.boundingBox.top / area_size));
+
+    if (x < 0 || y < 0)
+        return found;
+
+    //x + noAreasY * y
+
+
     int i = 0;
     for (auto &area : areas)
     {
@@ -107,41 +118,86 @@ std::vector<int16_t> World::areasForEntity(const Entity &entity)
 
 void World::update(sf::Time elapsedTime)
 {
+    indexMovingEntities();
+
     for (auto &player : *players)
     {
-        player.update(elapsedTime);
-        for (auto& area: areasForEntity(player))
-        {
-            for (auto& other_entity : static_entities[area])
-            {
-                sf::FloatRect intersection;
-                if (other_entity->boundingBox.intersects(player.boundingBox, intersection))
-                {
-                    player.intersectedWith(other_entity, intersection);
-                }
-            }
-        }
-
+        checkWallCollisions(player);
+        auto currentPlayerEntityId = player.entityId;
         for (auto &proj : player.projectiles)
         {
-            if (!proj.valid) continue;
-            for (auto& area: areasForEntity(proj))
+            checkProjectileCollisions(currentPlayerEntityId, proj);
+        }
+        player.update(elapsedTime);
+    }
+
+}
+
+void World::checkProjectileCollisions(int16_t currentPlayerEntityId, Projectile &proj)
+{
+    if (!proj.valid) return;
+    for (auto& area: areasForEntity(proj))
+    {
+        for (auto& other_entity : static_entities[area])
+        {
+            sf::FloatRect intersection;
+            if (other_entity->boundingBox.intersects(proj.boundingBox, intersection))
             {
-                for (auto& other_entity : static_entities[area])
-                {
-                    sf::FloatRect intersection;
-                    if (other_entity->boundingBox.intersects(player.boundingBox, intersection))
-                    {
-                        proj.intersectedWith(other_entity, intersection);
-                        printf("SEXO!\n");
-                    }
-                }
+                proj.intersectedWith(other_entity, intersection);
+            }
+        }
+        if (!proj.valid) return;
+
+        for (auto& target : moving_entities[area])
+        {
+            if (target->entityId == currentPlayerEntityId)
+                return;
+            sf::FloatRect intersection;
+            if (target->boundingBox.intersects(proj.boundingBox, intersection))
+            {
+                proj.intersectedWith(target, intersection);
+                target->intersectedWith(&proj, intersection);
             }
         }
     }
-
-    //for (int i = 0; i < pl)
 }
+
+void World::checkWallCollisions(Player &player)
+{
+    for (auto& area: areasForEntity(player))
+    {
+        for (auto& other_entity : static_entities[area])
+        {
+            sf::FloatRect intersection;
+            if (other_entity->boundingBox.intersects(player.boundingBox, intersection))
+            {
+                player.intersectedWith(other_entity, intersection);
+            }
+        }
+    }
+}
+
+void World::reset() {
+    areas.clear();
+    static_entities.clear();
+    world_entities.clear();
+    moving_entities.clear();
+}
+void World::indexMovingEntities()
+{
+    moving_entities.clear();
+    for (auto& entity : *players)
+    {
+        for (auto& area : areasForEntity(entity))
+        {
+            moving_entities[area].push_back(&entity);
+        }
+    }
+}
+
+
+
+
 
 
 

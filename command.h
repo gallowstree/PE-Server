@@ -9,6 +9,7 @@ typedef struct commamd
 {
     int16_t playerId;
     int16_t commandType;
+    int16_t team;
     int msgNum;
     int controls;
     float rotation;

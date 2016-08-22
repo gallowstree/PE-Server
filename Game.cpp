@@ -9,16 +9,41 @@
 
 const int16_t s_players_command = 0;
 const int16_t s_projectiles_command = 1;
-int16_t const s_player_id_command = 2;
+const int16_t  s_player_id_command = 2;
 const int16_t c_input_command = 0;
 const int16_t c_join_game_command = 2;
+const int16_t c_info_command = 3;
+
+Game::Game() :
+        TimePerFrame(sf::seconds(1/120.0f)),
+        TimePerNetworkUpdate(sf::seconds(1/30.0f)),
+        world(),
+        maxPlayers(4)
+{
+    pthread_mutex_init(&commandQueueMutex, NULL);
+    reset();
+}
+
+
+void Game::reset()
+{
+    pthread_mutex_lock(&commandQueueMutex);
+    std::queue<command_t>().swap(commandQueue);
+    players.clear();
+    inLobby.clear();
+
+    world.init("maps/level1.txt", &players);
+    message_number = 0;
+    currentFrame = 0;
+    pthread_mutex_unlock(&commandQueueMutex);
+}
 
 void Game::run()
 {
     sf::Clock clock;
     sf::Time timeSinceLastUpdate = sf::Time::Zero;
     sf::Time timeSinceLastNetworkUpdate = sf::Time::Zero;
-    while (true)
+    while (!checkForWinner())
     {
         sf::Time elapsedTime = clock.restart();
         timeSinceLastUpdate += elapsedTime;
@@ -39,28 +64,21 @@ void Game::run()
     }
 }
 
-Game::Game() :
-    TimePerFrame(sf::seconds(1/120.0f)),
-    TimePerNetworkUpdate(sf::seconds(1/30.0f)),
-    world()
-{
-    pthread_mutex_init(&commandQueueMutex, NULL);
-    reset();
-}
-
 void Game::receiveMessage(char *buffer, size_t nBytes, sockaddr_in *clientAddr)
 {
     command_t command;
     Serialization::charsToShort(buffer, command.commandType, 0);
     command.commandType = command.commandType;
     command.client_ip = inet_ntoa(clientAddr->sin_addr);
-
+    printf("received command type: %i\n", command.commandType);
     switch (command.commandType)
     {
         case c_input_command:
             deserializeInputCmd(command, buffer);
             break;
         case c_join_game_command:
+            Serialization::charsToShort(buffer, command.team, 2);
+        case c_info_command:
             break;
     }
 
@@ -69,38 +87,7 @@ void Game::receiveMessage(char *buffer, size_t nBytes, sockaddr_in *clientAddr)
     pthread_mutex_unlock(&commandQueueMutex);
 }
 
-void Game::reset()
-{
 
-    pthread_mutex_lock(&commandQueueMutex);
-    std::queue<command_t>().swap(commandQueue);
-    players.clear();
-
-    world.init("maps/level1.txt", &players);
-    message_number = 0;
-    currentFrame = 0;
-    pthread_mutex_unlock(&commandQueueMutex);
-}
-
-void Game::deserializeInputCmd(command_t &command, const char *buffer)
-{
-    Serialization::charsToShort(buffer, command.playerId, 2);
-    Serialization::charsToInt(buffer, command.msgNum, 4);
-    Serialization::charsToInt(buffer, command.controls, 8);
-    Serialization::charsToFloat(buffer, command.rotation, 12);
-    Serialization::charsToInt(buffer, command.numberOfAcks, 16);
-
-    size_t ack_pos = 20;
-    if (command.numberOfAcks > 0)
-    {
-        command.messageAcks = new int[command.numberOfAcks];//(int32_t *) malloc(sizeof(int32_t) * command.numberOfAcks);
-        for (int i = 0; i < command.numberOfAcks; i++)
-        {
-            Serialization::charsToInt(buffer, command.messageAcks[i], ack_pos);
-            ack_pos += 4;
-        }
-    }
-}
 
 void Game::processEvents()
 {
@@ -112,61 +99,74 @@ void Game::processEvents()
 
         if (command.commandType == c_input_command && command.playerId != -1 && players.size() >= command.playerId && !players.empty())
         {
-            players[command.playerId].controls = command.controls;
-            players[command.playerId].rotation = command.rotation;
-            players[command.playerId].hasNotAckedId = false;
-
-            for (int i = 0; i < command.numberOfAcks; i++)
-            {
-                auto ack = command.messageAcks[i];
-                auto pending = pendingMessageAcks[ack];
-                pending.erase(std::remove(pending.begin(), pending.end(), command.playerId), pending.end());
-
-                if (pending.size() == 0)
-                {
-                    pendingMessageAcks.erase(ack);
-                    if (projectilesInMessage.count(ack) > 0)
-                    {
-                        for (auto &p : projectilesInMessage[ack])
-                        {
-                            if (p != nullptr)
-                                p->acked = true;
-                        }
-                        projectilesInMessage.erase(ack);
-                    }
-                }
-            }
-            if (command.numberOfAcks > 0)
-            {
-                delete[](command.messageAcks);
-            }
+            processInputCmd(command);
         }
         else if (command.commandType == c_join_game_command)
         {
-            int16_t playerIndex = -1;
-            for(auto &player : players)
-            {
-                if(strcmp(player.ip,command.client_ip) == 0)
-                    playerIndex = player.playerId;
-            }
-            printf("Processing join request %s %d\n",command.client_ip,playerIndex);
-            if(playerIndex == -1)
-            {
-                int16_t new_player_id = (int16_t)players.size();
-                char * c_ip = (char *)malloc(strlen(command.client_ip)+1);
-                strcpy(c_ip,command.client_ip);
-                Player newPlayer(new_player_id, c_ip, 50421, sf::Vector2f(20.0f,20.0f));
-                newPlayer.movementBounds = sf::FloatRect(0.0f, 0.0f, 2400.0f, 2400.0f);
-                players.push_back(newPlayer);
-                printf("Inserted player %d\n", new_player_id);
-            }
-            else
-            {
-                players[playerIndex].hasNotAckedId = true;
-            }
+            processJoinCmd(command);
+        }
+        else if (command.commandType == c_info_command)
+        {
+            processInfoCommand(command);
         }
     }
     pthread_mutex_unlock(&commandQueueMutex);
+}
+
+void Game::processJoinCmd(const command_t &command)
+{
+    auto playerIndex = findPlayerIndexByIp(command.client_ip);
+
+    if(playerIndex == -1)
+    {
+        int16_t new_player_id = (int16_t) players.size();
+        char * c_ip = (char *)malloc(strlen(command.client_ip)+1);
+        strcpy(c_ip,command.client_ip);
+
+        Player newPlayer(new_player_id, sf::Vector2f(20.0f, 20.0f), OutputSocket(c_ip, 50421), command.team);
+
+        deleteFromLobby(command.client_ip);
+
+        newPlayer.movementBounds = sf::FloatRect(0.0f, 0.0f, world.bounds.width, world.bounds.height);
+        players.push_back(newPlayer);
+        printf("Inserted player %d\n", new_player_id);
+    }
+    else
+    {
+        players[playerIndex].hasNotAckedId = true;
+    }
+}
+
+void Game::processInputCmd(const command_t &command)
+{
+    players[command.playerId].controls = command.controls;
+    players[command.playerId].rotation = command.rotation;
+    players[command.playerId].hasNotAckedId = false;
+
+    for (int i = 0; i < command.numberOfAcks; i++)
+    {
+        auto ack = command.messageAcks[i];
+        auto pending = pendingMessageAcks[ack];
+        pending.erase(remove(pending.begin(), pending.end(), command.playerId), pending.end());
+
+        if (pending.size() == 0)
+        {
+            pendingMessageAcks.erase(ack);
+            if (projectilesInMessage.count(ack) > 0)
+            {
+                for (auto &p : projectilesInMessage[ack])
+                {
+                    if (p != nullptr)
+                        p->acked = true;
+                }
+                projectilesInMessage.erase(ack);
+            }
+        }
+    }
+    if (command.numberOfAcks > 0)
+    {
+        delete[](command.messageAcks);
+    }
 }
 
 void Game::networkUpdate()
@@ -192,7 +192,7 @@ void Game::networkUpdate()
 
         for (auto &projectile : player.projectiles)
         {
-            if (projectile.valid && !projectile.acked)
+            if (!projectile.acked)
             {
                 projectile_pos += projectile.serialize(projectiles, projectile_pos);
                 if (projectilesInMessage.count(projectile_msgno) == 0)
@@ -240,5 +240,125 @@ void Game::networkUpdate()
         }
     }
 }
+
+void Game::deserializeInputCmd(command_t &command, const char *buffer)
+{
+    Serialization::charsToShort(buffer, command.playerId, 2);
+    Serialization::charsToInt(buffer, command.msgNum, 4);
+    Serialization::charsToInt(buffer, command.controls, 8);
+    Serialization::charsToFloat(buffer, command.rotation, 12);
+    Serialization::charsToInt(buffer, command.numberOfAcks, 16);
+
+    size_t ack_pos = 20;
+    if (command.numberOfAcks > 0)
+    {
+        command.messageAcks = new int[command.numberOfAcks];
+        for (int i = 0; i < command.numberOfAcks; i++)
+        {
+            Serialization::charsToInt(buffer, command.messageAcks[i], ack_pos);
+            ack_pos += 4;
+        }
+    }
+}
+
+void Game::processInfoCommand(command_t& command)
+{
+    lobbyPlayer_t * player = nullptr;
+
+    findLobbyPlayer(command.client_ip, player);
+
+    if (player != nullptr)
+    {
+        sendGameInfo(player->socket);
+    }
+    else if (players.size() + inLobby.size() < maxPlayers)
+    {
+        player = new lobbyPlayer_t;
+        player->socket = new OutputSocket(command.client_ip, 50421);
+        player->timeLeft = sf::seconds(30);
+        inLobby.push_back(*player);
+        sendGameInfo(player->socket);
+    }
+    else
+    {
+        char out[2];
+        Serialization::shortToChars(2, out, 0);
+        OutputSocket(command.client_ip, 50421).send(out, 2);
+    }
+}
+
+
+int16_t Game::findPlayerIndexByIp(const char * ip)
+{
+    int16_t playerIndex = -1;
+    for(auto &player : players)
+    {
+        if(strcmp(player.ip,ip) == 0)
+            playerIndex = player.playerId;
+    }
+    return  playerIndex;
+}
+
+int Game::findLobbyPlayer(const char * ip, lobbyPlayer_t* &found)
+{
+    int i = 0;
+    for (auto &player : inLobby)
+    {
+        if(strcmp(player.socket->ip, ip) == 0)
+        {
+            found = &player;
+            return i;
+        }
+        i++;
+    }
+
+    return -1;
+}
+
+void Game::sendGameInfo(const OutputSocket* socket)
+{
+    char out[6];
+    Serialization::shortToChars(1, out, 0);
+    Serialization::shortToChars(1, out, 2);
+    Serialization::shortToChars(2, out, 4);
+
+    socket->send(out, 6);
+}
+
+void Game::deleteFromLobby(const char *ip)
+{
+    lobbyPlayer_t *lobbyP = nullptr;
+    auto lobbyIndex = findLobbyPlayer(ip, lobbyP);
+    if (lobbyIndex != -1)
+    {
+        inLobby.erase(inLobby.begin() + lobbyIndex);
+        delete lobbyP->socket;
+        delete lobbyP;
+    }
+}
+
+bool Game::checkForWinner()
+{
+    int team0_alive = 0;
+    int team1_alive = 0;
+
+    for (auto& player : players)
+    {
+        if (player.health > 0)
+        {
+            if (player.getTeam() == 0) team0_alive++;
+            else if (player.getTeam() == 1) team1_alive++;
+        }
+    }
+
+    return team0_alive == 0 || team1_alive == 0;
+}
+
+
+
+
+
+
+
 
 

@@ -29,7 +29,7 @@ class Projectile : public Entity
 
 
 
-        Projectile(sf::Vector2f position, float speed, float angle, float range, int16_t type);
+        Projectile(sf::Vector2f position, float speed, float angle, float range, int16_t type, int16_t playerId);
         void update(sf::Time elapsedTime);
         int serialize(char *buffer, int position);
 

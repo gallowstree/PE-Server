@@ -6,7 +6,7 @@
 #include "serialization.h"
 #include <math.h>
 
-Projectile::Projectile(sf::Vector2f position, float speed, float angle, float range, int16_t type):
+Projectile::Projectile(sf::Vector2f position, float speed, float angle, float range, int16_t type, int16_t playerId):
 speed(speed),
 velocity(sf::Vector2f(speed * cosf(angle), speed * sinf(angle))),
 rect(sf::Vector2f(6,6)),
@@ -15,18 +15,24 @@ origin(position),
 valid(true),
 acked(false),
 projectileId(nextProjectileId),
+playerId(playerId),
 projectileType(type)
 {
+    type = EntityType::Projectile_T;
     nextProjectileId++;
-    update(sf::seconds(0.01));
     boundingBox = BoundingBox(position.x, position.y, 6, 6);
+    update(sf::seconds(0.01));
+
+
 }
 
 void Projectile::update(sf::Time elapsedTime)
 {
+    if (!this->valid) return;
     auto movement = velocity * elapsedTime.asSeconds();
     this->boundingBox.left += movement.x;
     this->boundingBox.top += movement.y;
+
     sf::Vector2f distance = boundingBox.getPosition() - origin;
 
     if (sqrtf(distance.x*distance.x + distance.y*distance.y) >= range)
@@ -50,6 +56,9 @@ int Projectile::serialize(char * buffer, int position)
     pos += 4;
     Serialization::floatToChars(this->origin.y, buffer, pos);
     pos += 4;
+    Serialization::shortToChars(this->playerId, buffer, pos);
+    pos += 2;
+
 
     return pos - position;
 }

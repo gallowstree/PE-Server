@@ -14,7 +14,8 @@
 enum EntityType
 {
     Wall_T,
-    Player_T
+    Player_T,
+    Projectile_T
 };
 
 

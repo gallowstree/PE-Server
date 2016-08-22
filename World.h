@@ -21,23 +21,34 @@ public:
     std::vector<int16_t> areasForEntity(const Entity &entity);
     std::vector<Player>* players;
 
-private:
     sf::FloatRect bounds;
+private:
     std::vector<Area*> areas;
     float area_size;
+    int noAreasX;
+    int noAreasY;
 
     //Every position in the first vector represents an area (area 0, 1, ..., n)
     //Every vector in each position has references to every object in the area
     std::vector<std::vector<Entity*>> static_entities;
+    std::vector<std::vector<Entity*>> moving_entities;
     std::vector<Entity> world_entities;
 
     void readMap(const char *name);
 
     int parseMapParameter(std::string & line);
 
-    void populateStaticEntities();
+    void indexStaticEntities();
 
     void createAreas();
+
+    void reset();
+
+    void indexMovingEntities();
+
+    void checkWallCollisions(Player &player);
+
+    void checkProjectileCollisions(int16_t currentPlayerEntityId, Projectile &proj);
 };
 
 

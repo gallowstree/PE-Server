@@ -10,6 +10,7 @@
 const int16_t s_players_command = 0;
 const int16_t s_projectiles_command = 1;
 const int16_t  s_player_id_command = 2;
+const int16_t s_gameover_command = 3;
 const int16_t c_input_command = 0;
 const int16_t c_join_game_command = 2;
 const int16_t c_info_command = 3;
@@ -62,6 +63,26 @@ void Game::run()
             networkUpdate();
         }
     }
+
+    char buffer[8];
+    message_number++;
+    int16_t winner = 2;
+
+    if (alivePlayers[0] > 0) winner = 0;
+    if (alivePlayers[1] > 0) winner = 1;
+
+    while (true)
+    {
+        for (auto& player : players)
+        {
+            Serialization::intToChars(message_number, buffer, 0);
+            Serialization::shortToChars(s_gameover_command, buffer, 4);
+            Serialization::shortToChars(winner, buffer, 6);
+            player.send(buffer, 8);
+        }
+
+        sleep(1);
+    }
 }
 
 void Game::receiveMessage(char *buffer, size_t nBytes, sockaddr_in *clientAddr)
@@ -70,13 +91,14 @@ void Game::receiveMessage(char *buffer, size_t nBytes, sockaddr_in *clientAddr)
     Serialization::charsToShort(buffer, command.commandType, 0);
     command.commandType = command.commandType;
     command.client_ip = inet_ntoa(clientAddr->sin_addr);
-    printf("received command type: %i\n", command.commandType);
+    //printf("received command type: %i\n", command.commandType);
     switch (command.commandType)
     {
         case c_input_command:
             deserializeInputCmd(command, buffer);
             break;
         case c_join_game_command:
+            printf("Received join command\n");
             Serialization::charsToShort(buffer, command.team, 2);
         case c_info_command:
             break;
@@ -124,12 +146,12 @@ void Game::processJoinCmd(const command_t &command)
         strcpy(c_ip,command.client_ip);
 
         Player newPlayer(new_player_id, sf::Vector2f(20.0f, 20.0f), OutputSocket(c_ip, 50421), command.team);
-        printf("command team %i\n", command.team);
+
         deleteFromLobby(command.client_ip);
 
         newPlayer.movementBounds = sf::FloatRect(0.0f, 0.0f, world.bounds.width, world.bounds.height);
         players.push_back(newPlayer);
-        printf("Inserted player %d\n", new_player_id);
+        printf("Inserted player %d team: %d\n", new_player_id, command.team);
     }
     else
     {
@@ -269,12 +291,10 @@ void Game::processInfoCommand(command_t& command)
 
     if (player != nullptr)
     {
-        printf("a\n");
         sendGameInfo(player->socket);
     }
     else if (players.size() + inLobby.size() < maxPlayers)
     {
-        printf("b\n");
         player = new lobbyPlayer_t;
         player->socket = new OutputSocket(command.client_ip, 50421);
         player->timeLeft = sf::seconds(30);
@@ -319,14 +339,12 @@ int Game::findLobbyPlayer(const char * ip, lobbyPlayer_t* &found)
 
 void Game::sendGameInfo(const OutputSocket* socket)
 {
-    printf("c\n");
     char out[6];
     Serialization::shortToChars(1, out, 0);
-    Serialization::shortToChars(1, out, 2);
-    Serialization::shortToChars(2, out, 4);
+    Serialization::shortToChars(noPlayers[0], out, 2);
+    Serialization::shortToChars(noPlayers[1], out, 4);
 
     socket->send(out, 6);
-    printf("d\n");
 }
 
 void Game::deleteFromLobby(const char *ip)
@@ -336,30 +354,34 @@ void Game::deleteFromLobby(const char *ip)
     if (lobbyIndex != -1)
     {
         inLobby.erase(inLobby.begin() + lobbyIndex);
-        delete lobbyP->socket;
-        delete lobbyP;
+        if (lobbyP != nullptr && lobbyP->socket != nullptr)
+        {
+            delete lobbyP->socket;
+            lobbyP->socket = nullptr;
+        }
+        else if (lobbyP != nullptr)
+        {
+            delete lobbyP;
+            lobbyP = nullptr;
+        }
     }
 }
 
 bool Game::checkForWinner()
 {
-    int team0_alive = 0;
-    int team1_alive = 0;
-
+    alivePlayers[0] = 0;
+    alivePlayers[1] = 0;
+    noPlayers[0] = 0;
+    noPlayers[1] = 0;
 
     for (auto& player : players)
     {
-        if (player.getTeam() == 0)
-        {
-            if (player.health > 0) team0_alive++;
-        }
-        else if (player.getTeam() == 1)
-        {
-            if (player.health > 0) team1_alive++;
-        }
+        noPlayers[player.getTeam()]++;
+        if (player.health > 0)
+            alivePlayers[player.getTeam()]++;
     }
 
-    return false;
+    return (noPlayers[0] > 0 && noPlayers[1] > 0) && (alivePlayers[0] == 0 || alivePlayers[1] == 0);
 }
 
 

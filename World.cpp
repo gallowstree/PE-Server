@@ -42,7 +42,6 @@ void World::readMap(const char *name)
     bounds.width = this->parseMapParameter(line);
     bounds.height = this->parseMapParameter(line);
     area_size = atoi(line.c_str());
-    printf("w:%f,h:%f,as:%f", bounds.width, bounds.height, area_size);
 
     while (std::getline(mapFile, line))
     {
@@ -126,6 +125,7 @@ void World::update(sf::Time elapsedTime)
         auto currentPlayerEntityId = player.entityId;
         for (auto &proj : player.projectiles)
         {
+            //printf("currplayerentity %i\n", currentPlayerEntityId);
             checkProjectileCollisions(currentPlayerEntityId, proj);
         }
         player.update(elapsedTime);
@@ -138,25 +138,29 @@ void World::checkProjectileCollisions(int16_t currentPlayerEntityId, Projectile 
     if (!proj.valid) return;
     for (auto& area: areasForEntity(proj))
     {
+
         for (auto& other_entity : static_entities[area])
         {
             sf::FloatRect intersection;
             if (other_entity->boundingBox.intersects(proj.boundingBox, intersection))
             {
+                //printf("Intersected static!!\n");
                 proj.intersectedWith(other_entity, intersection);
             }
         }
         if (!proj.valid) return;
-
+        //printf("area %i\n", area);
         for (auto& target : moving_entities[area])
         {
+            //printf("Moving entity %i curr player: %i\n", target->entityId, currentPlayerEntityId);
             if (target->entityId == currentPlayerEntityId)
                 return;
             sf::FloatRect intersection;
             if (target->boundingBox.intersects(proj.boundingBox, intersection))
             {
-                proj.intersectedWith(target, intersection);
+                //printf("intersected moving!\n");
                 target->intersectedWith(&proj, intersection);
+                proj.intersectedWith(target, intersection);
             }
         }
     }
@@ -190,6 +194,7 @@ void World::indexMovingEntities()
     {
         for (auto& area : areasForEntity(entity))
         {
+            //printf("area: %i, player:%i\n", area, entity.playerId);
             moving_entities[area].push_back(&entity);
         }
     }

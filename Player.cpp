@@ -37,6 +37,9 @@ void Player::send(const char *outbuffer, size_t size, int32_t reliableId)
 
 void Player::updateMovement(sf::Time elapsedTime)
 {
+    if (health <= 0)
+        return;
+
     sf::Vector2f movement (0,0);
     float distance = speed * elapsedTime.asSeconds();
 
@@ -97,7 +100,7 @@ int Player::serialize(char * buffer, int position)
 {
     int pos = position;
 
-    printf("%i, %i\n", playerId, playerInfo);
+    //printf("%i, %i\n", playerId, playerInfo);
 
     Serialization::shortToChars(this->playerId | this->playerInfo, buffer, pos); //Player id 6 - 7
     pos += 2;
@@ -153,14 +156,19 @@ void Player::intersectedWith(Entity* other, sf::FloatRect intersection)
         }
         updateCross();
     }
-    else
+    else if (other->type == EntityType::Projectile_T)
     {
-
+        if (((Projectile*) other)->valid)
+        {
+            health -= 25;
+            printf("player %i hit by projectile %i, health %i\n", playerId, other->entityId, health);
+        }
     }
 }
 
 int Player::getTeam() {
-    return playerInfo & (1 << 8);
+    auto team = (playerInfo & (1 << 8)) >> 8;
+    return team;
 }
 
 

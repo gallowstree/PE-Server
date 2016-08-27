@@ -6,7 +6,7 @@
 #include "serialization.h"
 #include <math.h>
 
-Projectile::Projectile(sf::Vector2f position, float speed, float angle, float range, int16_t type, int16_t playerId):
+Projectile::Projectile(sf::Vector2f position, float speed, float angle, float range, int16_t projectileType, int16_t playerId):
 speed(speed),
 velocity(sf::Vector2f(speed * cosf(angle), speed * sinf(angle))),
 rect(sf::Vector2f(6,6)),
@@ -16,14 +16,12 @@ valid(true),
 acked(false),
 projectileId(nextProjectileId),
 playerId(playerId),
-projectileType(type)
+projectileType(projectileType)
 {
-    type = EntityType::Projectile_T;
+    this->type = EntityType ::Projectile_T;
     nextProjectileId++;
     boundingBox = BoundingBox(position.x, position.y, 6, 6);
     update(sf::seconds(0.01));
-
-
 }
 
 void Projectile::update(sf::Time elapsedTime)

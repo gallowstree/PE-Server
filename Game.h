@@ -28,6 +28,9 @@ private:
     int message_number;
     size_t maxPlayers;
 
+    int16_t noPlayers[2];
+    int16_t alivePlayers[2];
+
     std::vector<Player> players;
     std::vector<lobbyPlayer_t> inLobby;
     std::queue<command_t> commandQueue;

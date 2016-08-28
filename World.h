@@ -15,11 +15,11 @@ class World
 {
 public:
     World();
-    void init(const char * mapName, std::vector<Player>* players);
+    void init(const char * mapName, std::vector<Player*>* players);
     void update(sf::Time elapsedTime);
     void processEvents();
     std::vector<int16_t> areasForEntity(const Entity &entity);
-    std::vector<Player>* players;
+    std::vector<Player*>* players;
 
     sf::FloatRect bounds;
 private:

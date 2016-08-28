@@ -31,7 +31,6 @@ void Game::reset()
     pthread_mutex_lock(&commandQueueMutex);
     std::queue<command_t>().swap(commandQueue);
     players.clear();
-    inLobby.clear();
 
     world.init("maps/level1.txt", &players);
     message_number = 0;
@@ -78,7 +77,7 @@ void Game::run()
             Serialization::intToChars(message_number, buffer, 0);
             Serialization::shortToChars(s_gameover_command, buffer, 4);
             Serialization::shortToChars(winner, buffer, 6);
-            player.send(buffer, 8);
+            player->send(buffer, 8);
         }
 
         sleep(1);
@@ -139,31 +138,29 @@ void Game::processJoinCmd(const command_t &command)
 {
     auto playerIndex = findPlayerIndexByIp(command.client_ip);
 
-    if(playerIndex == -1)
+    if (playerIndex != -1)
     {
-        int16_t new_player_id = (int16_t) players.size();
-        char * c_ip = (char *)malloc(strlen(command.client_ip)+1);
-        strcpy(c_ip,command.client_ip);
+        auto player = players[playerIndex];
+        player->hasNotAckedId = true;
 
-        Player newPlayer(new_player_id, sf::Vector2f(20.0f, 20.0f), OutputSocket(c_ip, 50421), command.team);
-
-        deleteFromLobby(command.client_ip);
-
-        newPlayer.movementBounds = sf::FloatRect(0.0f, 0.0f, world.bounds.width, world.bounds.height);
-        players.push_back(newPlayer);
-        printf("Inserted player %d team: %d\n", new_player_id, command.team);
+        if (player->getValid() == 0)
+        {
+            player->setTeam(command.team);
+            player->setValid(1);
+            printf("Setting team for player, ID: %i, TEAM: %i\n, VALID: %i", playerIndex, player->getTeam(), player->getValid());
+        }
     }
     else
     {
-        players[playerIndex].hasNotAckedId = true;
+        printf("ESTO NO DEBERÍA PASAAAAAARRRRRRRRR !!!!!!!!!!!!!!\n");
     }
 }
 
 void Game::processInputCmd(const command_t &command)
 {
-    players[command.playerId].controls = command.controls;
-    players[command.playerId].rotation = command.rotation;
-    players[command.playerId].hasNotAckedId = false;
+    players[command.playerId]->controls = command.controls;
+    players[command.playerId]->rotation = command.rotation;
+    players[command.playerId]->hasNotAckedId = false;
 
     for (int i = 0; i < command.numberOfAcks; i++)
     {
@@ -210,9 +207,9 @@ void Game::networkUpdate()
 
     for (auto &player : players)
     {
-        pos += player.serialize(outbuffer, pos);
+        pos += player->serialize(outbuffer, pos);
 
-        for (auto &projectile : player.projectiles)
+        for (auto &projectile : player->projectiles)
         {
             if (!projectile.acked)
             {
@@ -235,18 +232,18 @@ void Game::networkUpdate()
     //Maybe move this to another thread?
     for (auto &player : players)
     {
-        player.send(outbuffer, pos);
+        player->send(outbuffer, pos);
         if (projectile_pos > 10)
         {
-            player.send(projectiles, projectile_pos);
+            player->send(projectiles, projectile_pos);
             if (pendingMessageAcks.count(projectile_msgno) == 0)
             {
                 pendingMessageAcks[projectile_msgno] = std::vector<int16_t >();
             }
-            pendingMessageAcks[projectile_msgno].push_back(player.playerId);
+            pendingMessageAcks[projectile_msgno].push_back(player->playerId);
         }
 
-        if (player.hasNotAckedId)
+        if (player->hasNotAckedId)
         {
             char playerIdBuffer[100];
             size_t pId_pos = 0;
@@ -255,10 +252,10 @@ void Game::networkUpdate()
             pId_pos += 4;
             Serialization::shortToChars(s_player_id_command, playerIdBuffer, pId_pos);
             pId_pos += 2;
-            Serialization::shortToChars(player.playerId, playerIdBuffer, pId_pos);
+            Serialization::shortToChars(player->playerId, playerIdBuffer, pId_pos);
             pId_pos += 2;
 
-            player.send(playerIdBuffer, pId_pos);
+            player->send(playerIdBuffer, pId_pos);
         }
     }
 }
@@ -285,23 +282,28 @@ void Game::deserializeInputCmd(command_t &command, const char *buffer)
 
 void Game::processInfoCommand(command_t& command)
 {
-    lobbyPlayer_t * player = nullptr;
+    int playerIdx = findPlayerIndexByIp(command.client_ip);
 
-    findLobbyPlayer(command.client_ip, player);
 
-    if (player != nullptr)
+    if (playerIdx != -1) //Player already exists
     {
-        sendGameInfo(player->socket);
+        sendGameInfo(*players[playerIdx]);
     }
-    else if (players.size() + inLobby.size() < maxPlayers)
+    else if (players.size() < maxPlayers) //There is room for the player
     {
-        player = new lobbyPlayer_t;
-        player->socket = new OutputSocket(command.client_ip, 50421);
-        player->timeLeft = sf::seconds(30);
-        inLobby.push_back(*player);
-        sendGameInfo(player->socket);
+        int16_t new_player_id = (int16_t) players.size();
+        char * c_ip = (char *)malloc(strlen(command.client_ip)+1);
+        strcpy(c_ip,command.client_ip);
+
+        printf("Created player %i with ip %s, team pending!\n", new_player_id, c_ip);
+
+        Player* newPlayer = new Player(new_player_id, sf::Vector2f(20.0f, 20.0f), OutputSocket(c_ip, 50421));
+
+        newPlayer->movementBounds = sf::FloatRect(0.0f, 0.0f, world.bounds.width, world.bounds.height);
+        players.push_back(newPlayer);
+        sendGameInfo(*newPlayer);
     }
-    else
+    else //Server full
     {
         char out[2];
         Serialization::shortToChars(2, out, 0);
@@ -309,63 +311,29 @@ void Game::processInfoCommand(command_t& command)
     }
 }
 
-
+//Returns index of player with the given ip, -1 if not found
 int16_t Game::findPlayerIndexByIp(const char * ip)
 {
     int16_t playerIndex = -1;
     for(auto &player : players)
     {
-        if(strcmp(player.ip,ip) == 0)
-            playerIndex = player.playerId;
+        if(strcmp(player->ip,ip) == 0)
+            playerIndex = player->playerId;
     }
     return  playerIndex;
 }
 
-int Game::findLobbyPlayer(const char * ip, lobbyPlayer_t* &found)
-{
-    int i = 0;
-    for (auto &player : inLobby)
-    {
-        if(strcmp(player.socket->ip, ip) == 0)
-        {
-            found = &player;
-            return i;
-        }
-        i++;
-    }
 
-    return -1;
-}
 
-void Game::sendGameInfo(const OutputSocket* socket)
+void Game::sendGameInfo(Player &player)
 {
     char out[6];
     Serialization::shortToChars(1, out, 0);
     Serialization::shortToChars(noPlayers[0], out, 2);
     Serialization::shortToChars(noPlayers[1], out, 4);
-
-    socket->send(out, 6);
+    player.send(out, 6);
 }
 
-void Game::deleteFromLobby(const char *ip)
-{
-    lobbyPlayer_t *lobbyP = nullptr;
-    auto lobbyIndex = findLobbyPlayer(ip, lobbyP);
-    if (lobbyIndex != -1)
-    {
-        inLobby.erase(inLobby.begin() + lobbyIndex);
-        if (lobbyP != nullptr && lobbyP->socket != nullptr)
-        {
-            delete lobbyP->socket;
-            lobbyP->socket = nullptr;
-        }
-        else if (lobbyP != nullptr)
-        {
-            delete lobbyP;
-            lobbyP = nullptr;
-        }
-    }
-}
 
 bool Game::checkForWinner()
 {
@@ -376,9 +344,12 @@ bool Game::checkForWinner()
 
     for (auto& player : players)
     {
-        noPlayers[player.getTeam()]++;
-        if (player.health > 0)
-            alivePlayers[player.getTeam()]++;
+        if (player->getValid() == 0)
+            continue;
+
+        noPlayers[player->getTeam()]++;
+        if (player->health > 0)
+            alivePlayers[player->getTeam()]++;
     }
 
     return (noPlayers[0] > 0 && noPlayers[1] > 0) && (alivePlayers[0] == 0 || alivePlayers[1] == 0);

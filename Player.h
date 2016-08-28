@@ -43,8 +43,8 @@ public:
 
     //Weapons
     std::vector<Projectile> projectiles;
+    Player(int16_t playerId, sf::Vector2f position, OutputSocket socket);
 
-    Player(int16_t playerId, sf::Vector2f position, OutputSocket socket, int team);
     void send(const char* outbuffer, size_t size, int32_t reliableId = -1);
     void update(sf::Time elapsedTime);
 
@@ -52,6 +52,12 @@ public:
 
     int serialize(char *buffer, int position);
     void intersectedWith(Entity *other, sf::FloatRect intersection);
+
+    int getValid();
+
+    void setTeam(int16_t team);
+
+    void setValid(int16_t valid);
 
 private:
 
@@ -64,6 +70,7 @@ private:
     void updateCross();
 
     OutputSocket socket;
+
 };
 
 

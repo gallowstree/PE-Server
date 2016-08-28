@@ -11,11 +11,7 @@
 #include "World.h"
 #include "command.h"
 
-typedef struct lobbyPlayer
-{
-    OutputSocket * socket;
-    sf::Time timeLeft;
-} lobbyPlayer_t;
+
 
 class Game : public SocketListener
 {
@@ -31,8 +27,7 @@ private:
     int16_t noPlayers[2];
     int16_t alivePlayers[2];
 
-    std::vector<Player> players;
-    std::vector<lobbyPlayer_t> inLobby;
+    std::vector<Player*> players;
     std::queue<command_t> commandQueue;
     std::map<int32_t, std::vector<Projectile*>> projectilesInMessage;
     std::map<int32_t, std::vector<int16_t>> pendingMessageAcks;
@@ -56,11 +51,9 @@ private:
 
     int16_t findPlayerIndexByIp(const char * ip);
 
-    int findLobbyPlayer(const char *ip, lobbyPlayer_t* &found);
 
-    void sendGameInfo(const OutputSocket *socket);
+    void sendGameInfo(Player &player);
 
-    void deleteFromLobby(const char *ip);
 
     bool checkForWinner();
 

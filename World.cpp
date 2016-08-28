@@ -13,7 +13,7 @@ World::World()
 
 }
 
-void World::init(const char *mapName, std::vector<Player> *players)
+void World::init(const char *mapName, std::vector<Player*> *players)
 {
     reset();
     this->players = players;
@@ -121,14 +121,14 @@ void World::update(sf::Time elapsedTime)
 
     for (auto &player : *players)
     {
-        checkWallCollisions(player);
-        auto currentPlayerEntityId = player.entityId;
-        for (auto &proj : player.projectiles)
+        checkWallCollisions(*player);
+        auto currentPlayerEntityId = player->entityId;
+        for (auto &proj : player->projectiles)
         {
             //printf("currplayerentity %i\n", currentPlayerEntityId);
             checkProjectileCollisions(currentPlayerEntityId, proj);
         }
-        player.update(elapsedTime);
+        player->update(elapsedTime);
     }
 
 }
@@ -192,10 +192,10 @@ void World::indexMovingEntities()
     moving_entities.clear();
     for (auto& entity : *players)
     {
-        for (auto& area : areasForEntity(entity))
+        for (auto& area : areasForEntity(*entity))
         {
             //printf("area: %i, player:%i\n", area, entity.playerId);
-            moving_entities[area].push_back(&entity);
+            moving_entities[area].push_back(entity);
         }
     }
 }

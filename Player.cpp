@@ -9,7 +9,7 @@
 #include <math.h>
 
 
-Player::Player(int16_t playerId, sf::Vector2f position, OutputSocket socket, int team) :
+Player::Player(int16_t playerId, sf::Vector2f position, OutputSocket socket) :
 playerId(playerId),
 timeSinceLastShot(sf::Time::Zero),
 speed(500),
@@ -25,8 +25,20 @@ ip(socket.ip)
     horz_rect.width = boundingBox.width;
     vert_rect.height = boundingBox.height;
     type = EntityType::Player_T;
+    setTeam(0);
+    setValid(0);
+}
+
+void Player::setValid(int16_t valid)
+{
+    valid = (int16_t) ((valid & 0x1) << 9);
+    playerInfo |= valid;
+}
+
+void Player::setTeam(int16_t team)
+{
+    team = (int16_t) ((team & 0x1) << 8);
     playerInfo |= team;
-    playerInfo = playerInfo << 8;
 }
 
 
@@ -100,7 +112,7 @@ int Player::serialize(char * buffer, int position)
 {
     int pos = position;
 
-    //printf("%i, %i\n", playerId, playerInfo);
+    printf("sexo %04x\n", playerInfo);
 
     Serialization::shortToChars(this->playerId | this->playerInfo, buffer, pos); //Player id 6 - 7
     pos += 2;
@@ -167,8 +179,12 @@ void Player::intersectedWith(Entity* other, sf::FloatRect intersection)
 }
 
 int Player::getTeam() {
-    auto team = (playerInfo & (1 << 8)) >> 8;
+    auto team = (playerInfo & (0x0100)) >> 8;
     return team;
+}
+
+int Player::getValid() {
+    return (playerInfo & (0x0200)) >> 9;
 }
 
 

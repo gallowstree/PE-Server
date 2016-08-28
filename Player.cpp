@@ -111,9 +111,7 @@ void Player::update(sf::Time elapsedTime)
 int Player::serialize(char * buffer, int position)
 {
     int pos = position;
-
-    printf("sexo %04x\n", playerInfo);
-
+    
     Serialization::shortToChars(this->playerId | this->playerInfo, buffer, pos); //Player id 6 - 7
     pos += 2;
     Serialization::floatToChars(this->boundingBox.getPosition().x, buffer, pos); //Pos x 8 - 12

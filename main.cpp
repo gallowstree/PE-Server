@@ -13,7 +13,13 @@ int main()
 
     pthread_t listening_thread;
     pthread_create(&listening_thread, nullptr, &ServerSocket::runThread, &s);
-    g.run();
+
+    while (true)
+    {
+        g.run();
+        g.reset();
+    }
+
 
     pthread_join(listening_thread, nullptr);
     return 0;

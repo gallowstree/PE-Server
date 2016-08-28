@@ -19,6 +19,7 @@ public:
     Game();
     void run();
     void reset();
+
 private:
     uint currentFrame;
     int message_number;
@@ -38,25 +39,16 @@ private:
     pthread_mutex_t commandQueueMutex;
 
     void receiveMessage(char *buffer, size_t nBytes, sockaddr_in *clientAddr);
-
     void deserializeInputCmd(commamd &command, const char *buffer);
     void processEvents();
     void networkUpdate();
-
     void processInputCmd(const command_t &command);
-
-    void processJoinCmd(const command_t &command);
-
-    void processInfoCommand(command_t &command);
-
+    void processTeamCmd(const command_t &command);
+    void processJoinCmd(command_t &command);
     int16_t findPlayerIndexByIp(const char * ip);
-
-
     void sendGameInfo(Player &player);
-
-
     bool checkForWinner();
-
+    void broadcastResult();
 };
 
 

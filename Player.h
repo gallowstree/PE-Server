@@ -43,7 +43,7 @@ public:
 
     //Weapons
     std::vector<Projectile> projectiles;
-    Player(int16_t playerId, sf::Vector2f position, OutputSocket socket);
+    Player(int16_t playerId, sf::Vector2f position, OutputSocket socket, const char * nick);
 
     void send(const char* outbuffer, size_t size, int32_t reliableId = -1);
     void update(sf::Time elapsedTime);
@@ -59,6 +59,7 @@ public:
 
     void setValid(int16_t valid);
 
+    const char * nick;
 private:
 
     sf::Time timeSinceLastShot;

@@ -9,7 +9,7 @@
 #include <math.h>
 
 
-Player::Player(int16_t playerId, sf::Vector2f position, OutputSocket socket) :
+Player::Player(int16_t playerId, sf::Vector2f position, OutputSocket socket, const char * nick) :
 playerId(playerId),
 timeSinceLastShot(sf::Time::Zero),
 speed(500),
@@ -18,7 +18,8 @@ cross_thickness(5),
 socket(socket),
 health(100),
 playerInfo(0),
-ip(socket.ip)
+ip(socket.ip),
+nick(nick)
 {
     boundingBox = BoundingBox(position.x, position.y, 50, 50);
     updateCross();
@@ -90,12 +91,11 @@ void Player::updateProjectiles(sf::Time elapsedTime)
 
     if (controls & 0x10)
     {
-        if(timeSinceLastShot.asMilliseconds() > 120)
+        if(timeSinceLastShot.asMilliseconds() > 200 && health > 0)
         {
             timeSinceLastShot = sf::Time::Zero;
-
             auto pos = this->boundingBox.getPosition() + sf::Vector2f(boundingBox.width /2, boundingBox.height / 2);
-            projectiles.push_back(Projectile(pos, 800, this->rotation, 700, 0, playerId));
+            projectiles.push_back(Projectile(pos, 1000, this->rotation, 1000, 0, playerId));
         }
     }
 }
@@ -111,7 +111,7 @@ void Player::update(sf::Time elapsedTime)
 int Player::serialize(char * buffer, int position)
 {
     int pos = position;
-    
+
     Serialization::shortToChars(this->playerId | this->playerInfo, buffer, pos); //Player id 6 - 7
     pos += 2;
     Serialization::floatToChars(this->boundingBox.getPosition().x, buffer, pos); //Pos x 8 - 12
@@ -120,7 +120,8 @@ int Player::serialize(char * buffer, int position)
     pos += 4;
     Serialization::floatToChars(this->rotation, buffer, pos); //Angle in rads 13 - 17
     pos += 4;
-
+    strcpy(buffer + pos, nick);
+    pos += strlen(nick) + 1;
     return pos - position;
 }
 
@@ -171,7 +172,7 @@ void Player::intersectedWith(Entity* other, sf::FloatRect intersection)
         if (((Projectile*) other)->valid)
         {
             health -= 25;
-            printf("player %i hit by projectile %i, health %i\n", playerId, other->entityId, health);
+            //printf("player %i hit by projectile %i, health %i\n", playerId, other->entityId, health);
         }
     }
 }

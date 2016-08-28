@@ -9,11 +9,12 @@
 
 const int16_t s_players_command = 0;
 const int16_t s_projectiles_command = 1;
-const int16_t  s_player_id_command = 2;
+const int16_t s_player_id_command = 2;
 const int16_t s_gameover_command = 3;
+
 const int16_t c_input_command = 0;
-const int16_t c_join_game_command = 2;
-const int16_t c_info_command = 3;
+const int16_t c_team_command = 2;
+const int16_t c_join_game_command = 3;
 
 Game::Game() :
         TimePerFrame(sf::seconds(1/120.0f)),
@@ -29,12 +30,34 @@ Game::Game() :
 void Game::reset()
 {
     pthread_mutex_lock(&commandQueueMutex);
+
+    //Empty command queue
     std::queue<command_t>().swap(commandQueue);
+
+    //Delete all allocated players and clear the vector
+    for (auto it = players.begin() ; it != players.end(); ++it)
+    {
+        delete (*it)->ip;
+        delete (*it)->nick;
+        delete (*it);
+    }
     players.clear();
 
+    //Clear maps
+    projectilesInMessage.clear();
+    pendingMessageAcks.clear();
+
+    //Reset world and load map
     world.init("maps/level1.txt", &players);
+
+    //Clear state variables
     message_number = 0;
     currentFrame = 0;
+    alivePlayers[0] = 0;
+    alivePlayers[1] = 0;
+    noPlayers[0] = 0;
+    noPlayers[1] = 0;
+
     pthread_mutex_unlock(&commandQueueMutex);
 }
 
@@ -63,25 +86,8 @@ void Game::run()
         }
     }
 
-    char buffer[8];
-    message_number++;
-    int16_t winner = 2;
+    broadcastResult();
 
-    if (alivePlayers[0] > 0) winner = 0;
-    if (alivePlayers[1] > 0) winner = 1;
-
-    while (true)
-    {
-        for (auto& player : players)
-        {
-            Serialization::intToChars(message_number, buffer, 0);
-            Serialization::shortToChars(s_gameover_command, buffer, 4);
-            Serialization::shortToChars(winner, buffer, 6);
-            player->send(buffer, 8);
-        }
-
-        sleep(1);
-    }
 }
 
 void Game::receiveMessage(char *buffer, size_t nBytes, sockaddr_in *clientAddr)
@@ -90,16 +96,18 @@ void Game::receiveMessage(char *buffer, size_t nBytes, sockaddr_in *clientAddr)
     Serialization::charsToShort(buffer, command.commandType, 0);
     command.commandType = command.commandType;
     command.client_ip = inet_ntoa(clientAddr->sin_addr);
-    //printf("received command type: %i\n", command.commandType);
+
     switch (command.commandType)
     {
         case c_input_command:
             deserializeInputCmd(command, buffer);
             break;
-        case c_join_game_command:
+        case c_team_command:
             printf("Received join command\n");
             Serialization::charsToShort(buffer, command.team, 2);
-        case c_info_command:
+        case c_join_game_command:
+            memcpy(command.nickname, buffer + 2, 6);
+            printf("Received nick '%s' length: %i\n", command.nickname, strlen(command.nickname));
             break;
     }
 
@@ -122,19 +130,19 @@ void Game::processEvents()
         {
             processInputCmd(command);
         }
+        else if (command.commandType == c_team_command)
+        {
+            processTeamCmd(command);
+        }
         else if (command.commandType == c_join_game_command)
         {
             processJoinCmd(command);
-        }
-        else if (command.commandType == c_info_command)
-        {
-            processInfoCommand(command);
         }
     }
     pthread_mutex_unlock(&commandQueueMutex);
 }
 
-void Game::processJoinCmd(const command_t &command)
+void Game::processTeamCmd(const command_t &command)
 {
     auto playerIndex = findPlayerIndexByIp(command.client_ip);
 
@@ -280,7 +288,7 @@ void Game::deserializeInputCmd(command_t &command, const char *buffer)
     }
 }
 
-void Game::processInfoCommand(command_t& command)
+void Game::processJoinCmd(command_t &command)
 {
     int playerIdx = findPlayerIndexByIp(command.client_ip);
 
@@ -292,13 +300,15 @@ void Game::processInfoCommand(command_t& command)
     else if (players.size() < maxPlayers) //There is room for the player
     {
         int16_t new_player_id = (int16_t) players.size();
-        char * c_ip = (char *)malloc(strlen(command.client_ip)+1);
+        char * c_ip = (char *)calloc(strlen(command.client_ip)+1, sizeof(char));
         strcpy(c_ip,command.client_ip);
 
-        printf("Created player %i with ip %s, team pending!\n", new_player_id, c_ip);
+        char * nick = (char *)calloc(strlen(command.nickname)+1, sizeof(char));
+        strcpy(nick,command.nickname);
 
-        Player* newPlayer = new Player(new_player_id, sf::Vector2f(20.0f, 20.0f), OutputSocket(c_ip, 50421));
+        printf("Created player %i with ip %s and nick %s team pending!\n", new_player_id, c_ip, nick);
 
+        Player* newPlayer = new Player(new_player_id, sf::Vector2f(20.0f, 20.0f), OutputSocket(c_ip, 50421), nick);
         newPlayer->movementBounds = sf::FloatRect(0.0f, 0.0f, world.bounds.width, world.bounds.height);
         players.push_back(newPlayer);
         sendGameInfo(*newPlayer);
@@ -354,6 +364,41 @@ bool Game::checkForWinner()
 
     return (noPlayers[0] > 0 && noPlayers[1] > 0) && (alivePlayers[0] == 0 || alivePlayers[1] == 0);
 }
+
+void Game::broadcastResult()
+{
+    char buffer[8];
+    message_number++;
+    int16_t winner = 2;
+
+    if (alivePlayers[0] > 0) winner = 0;
+    if (alivePlayers[1] > 0) winner = 1;
+
+    pendingMessageAcks.clear();
+    sf::Clock clock;
+    sf::Time timeSinceLastUpdate = sf::Time::Zero;
+    sf::Time timeRemaining = sf::seconds(5);
+
+    while (timeRemaining.asSeconds() > 0)
+    {
+        sf::Time elapsedTime = clock.restart();
+        timeSinceLastUpdate += elapsedTime;
+        timeRemaining -= elapsedTime;
+        while (timeSinceLastUpdate > TimePerNetworkUpdate)
+        {
+            for (auto& player : players)
+            {
+                Serialization::intToChars(message_number, buffer, 0);
+                Serialization::shortToChars(s_gameover_command, buffer, 4);
+                Serialization::shortToChars(winner, buffer, 6);
+                player->send(buffer, 8);
+                timeSinceLastUpdate -= TimePerNetworkUpdate;
+            }
+        }
+    }
+}
+
+
 
 
 

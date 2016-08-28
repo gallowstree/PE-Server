@@ -125,7 +125,6 @@ void World::update(sf::Time elapsedTime)
         auto currentPlayerEntityId = player->entityId;
         for (auto &proj : player->projectiles)
         {
-            //printf("currplayerentity %i\n", currentPlayerEntityId);
             checkProjectileCollisions(currentPlayerEntityId, proj);
         }
         player->update(elapsedTime);
@@ -144,21 +143,20 @@ void World::checkProjectileCollisions(int16_t currentPlayerEntityId, Projectile 
             sf::FloatRect intersection;
             if (other_entity->boundingBox.intersects(proj.boundingBox, intersection))
             {
-                //printf("Intersected static!!\n");
                 proj.intersectedWith(other_entity, intersection);
             }
         }
-        if (!proj.valid) return;
-        //printf("area %i\n", area);
+
+        if (!proj.valid)
+            return;
+
         for (auto& target : moving_entities[area])
         {
-            //printf("Moving entity %i curr player: %i\n", target->entityId, currentPlayerEntityId);
             if (target->entityId == currentPlayerEntityId)
-                return;
+                continue;
             sf::FloatRect intersection;
-            if (target->boundingBox.intersects(proj.boundingBox, intersection))
+            if (target->boundingBox.intersects(proj.boundingBox, intersection) && proj.valid)
             {
-                //printf("intersected moving!\n");
                 target->intersectedWith(&proj, intersection);
                 proj.intersectedWith(target, intersection);
             }
@@ -194,17 +192,8 @@ void World::indexMovingEntities()
     {
         for (auto& area : areasForEntity(*entity))
         {
-            //printf("area: %i, player:%i\n", area, entity.playerId);
             moving_entities[area].push_back(entity);
         }
     }
 }
-
-
-
-
-
-
-
-
 

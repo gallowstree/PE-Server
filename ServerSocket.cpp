@@ -36,7 +36,6 @@ void ServerSocket::run()
     /*Bind socket with address struct*/
     bind(udpSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
 
-    printf("%d",strerror(errno));
     /*Initialize size variable to be used later on*/
     addr_size = sizeof clientAddr;
 

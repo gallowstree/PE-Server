@@ -120,6 +120,8 @@ int Player::serialize(char * buffer, int position)
     pos += 4;
     Serialization::floatToChars(this->rotation, buffer, pos); //Angle in rads 13 - 17
     pos += 4;
+    Serialization::shortToChars(this->health, buffer, pos); //Health 17 - 19
+    pos += 2;
     strcpy(buffer + pos, nick);
     pos += strlen(nick) + 1;
     return pos - position;

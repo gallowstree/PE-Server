@@ -36,7 +36,7 @@ public:
     sf::FloatRect vert_rect;
     sf::FloatRect horz_rect;
 
-    int health;
+    int16_t health = 0;
 
     //Events
     int controls = 0;

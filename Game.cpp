@@ -105,6 +105,7 @@ void Game::receiveMessage(char *buffer, size_t nBytes, sockaddr_in *clientAddr)
         case c_team_command:
             printf("Received join command\n");
             Serialization::charsToShort(buffer, command.team, 2);
+            break;
         case c_join_game_command:
             printf("here!\n");
             memset(command.nickname,0,7);

@@ -20,7 +20,10 @@ Game::Game() :
         TimePerFrame(sf::seconds(1/120.0f)),
         TimePerNetworkUpdate(sf::seconds(1/30.0f)),
         world(),
-        maxPlayers(4)
+        maxPlayers(4),
+        timeSinceGameEnded(sf::Time::Zero),
+        limboTime(sf::seconds(0.5)),
+        gameEnded(false)
 {
     pthread_mutex_init(&commandQueueMutex, NULL);
     reset();
@@ -30,6 +33,8 @@ Game::Game() :
 void Game::reset()
 {
     pthread_mutex_lock(&commandQueueMutex);
+
+    timeSinceGameEnded = sf::Time::Zero;
 
     //Empty command queue
     std::queue<command_t>().swap(commandQueue);
@@ -57,6 +62,7 @@ void Game::reset()
     alivePlayers[1] = 0;
     noPlayers[0] = 0;
     noPlayers[1] = 0;
+    gameEnded = false;
 
     pthread_mutex_unlock(&commandQueueMutex);
 }
@@ -66,11 +72,12 @@ void Game::run()
     sf::Clock clock;
     sf::Time timeSinceLastUpdate = sf::Time::Zero;
     sf::Time timeSinceLastNetworkUpdate = sf::Time::Zero;
-    while (!checkForWinner())
+    while (!checkForGameEnd() || timeSinceGameEnded < limboTime)
     {
         sf::Time elapsedTime = clock.restart();
         timeSinceLastUpdate += elapsedTime;
         timeSinceLastNetworkUpdate += elapsedTime;
+        timeSinceGameEnded += gameEnded ? elapsedTime : sf::Time::Zero;
         while (timeSinceLastUpdate > TimePerFrame)
         {
             currentFrame++;
@@ -107,7 +114,9 @@ void Game::receiveMessage(char *buffer, size_t nBytes, sockaddr_in *clientAddr)
             Serialization::charsToShort(buffer, command.team, 2);
             break;
         case c_join_game_command:
-            memcpy(command.nickname, buffer + 2, 6);
+            printf("here!\n");
+            memset(command.nickname,0,7);
+            strcpy(command.nickname, buffer + 2);
             printf("Received nick '%s' length: %i\n", command.nickname, strlen(command.nickname));
             break;
     }
@@ -346,7 +355,7 @@ void Game::sendGameInfo(Player &player)
 }
 
 
-bool Game::checkForWinner()
+bool Game::checkForGameEnd()
 {
     alivePlayers[0] = 0;
     alivePlayers[1] = 0;
@@ -363,7 +372,17 @@ bool Game::checkForWinner()
             alivePlayers[player->getTeam()]++;
     }
 
-    return (noPlayers[0] > 0 && noPlayers[1] > 0) && (alivePlayers[0] == 0 || alivePlayers[1] == 0);
+    bool teamsValid = (noPlayers[0] > 0 && noPlayers[1] > 0);
+    bool deadTeam   = (alivePlayers[0] == 0 || alivePlayers[1] == 0);
+
+
+    if (teamsValid &&
+        deadTeam)
+    {
+        gameEnded = true;
+    }
+
+    return gameEnded;
 }
 
 void Game::broadcastResult()

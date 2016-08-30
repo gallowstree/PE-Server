@@ -24,6 +24,10 @@ private:
     uint currentFrame;
     int message_number;
     size_t maxPlayers;
+    sf::Time timeSinceGameEnded;
+
+    //Send updates after game ended for this time
+    const sf::Time limboTime;
 
     int16_t noPlayers[2];
     int16_t alivePlayers[2];
@@ -47,8 +51,10 @@ private:
     void processJoinCmd(command_t &command);
     int16_t findPlayerIndexByIp(const char * ip);
     void sendGameInfo(Player &player);
-    bool checkForWinner();
+    bool checkForGameEnd();
     void broadcastResult();
+
+    bool gameEnded;
 };
 
 

@@ -9,7 +9,7 @@
 #include <math.h>
 
 
-Player::Player(int16_t playerId, sf::Vector2f position, OutputSocket socket, const char * nick) :
+Player::Player(int16_t playerId, sf::Vector2f position, OutputSocket socket, char * nick) :
 playerId(playerId),
 timeSinceLastShot(sf::Time::Zero),
 speed(500),

@@ -305,7 +305,10 @@ void Game::processJoinCmd(command_t &command)
 
     if (playerIdx != -1) //Player already exists
     {
-        sendGameInfo(*players[playerIdx]);
+        char out[2];
+        Serialization::shortToChars(2, out, 0);
+        strcpy(players[playerIdx]->nick,command.nickname);
+        OutputSocket(command.client_ip, 50422).send(out, 2);
     }
     else if (players.size() < maxPlayers) //There is room for the player
     {
@@ -313,7 +316,8 @@ void Game::processJoinCmd(command_t &command)
         char * c_ip = (char *)calloc(strlen(command.client_ip)+1, sizeof(char));
         strcpy(c_ip,command.client_ip);
 
-        char * nick = (char *)calloc(strlen(command.nickname)+1, sizeof(char));
+        char * nick = (char *)malloc(7*sizeof(char));
+        memset(nick,0,7);
         strcpy(nick,command.nickname);
 
         printf("Created player %i with ip %s and nick %s team pending!\n", new_player_id, c_ip, nick);
@@ -321,13 +325,13 @@ void Game::processJoinCmd(command_t &command)
         Player* newPlayer = new Player(new_player_id, sf::Vector2f(20.0f, 20.0f), OutputSocket(c_ip, 50421), nick);
         newPlayer->movementBounds = sf::FloatRect(0.0f, 0.0f, world.bounds.width, world.bounds.height);
         players.push_back(newPlayer);
-        sendGameInfo(*newPlayer);
+        sendGameInfo(c_ip);
     }
     else //Server full
     {
         char out[2];
-        Serialization::shortToChars(2, out, 0);
-        OutputSocket(command.client_ip, 50421).send(out, 2);
+        Serialization::shortToChars(3, out, 0);
+        OutputSocket(command.client_ip, 50422).send(out, 2);
     }
 }
 
@@ -345,13 +349,13 @@ int16_t Game::findPlayerIndexByIp(const char * ip)
 
 
 
-void Game::sendGameInfo(Player &player)
+void Game::sendGameInfo(char * c_ip)
 {
     char out[6];
     Serialization::shortToChars(1, out, 0);
     Serialization::shortToChars(noPlayers[0], out, 2);
     Serialization::shortToChars(noPlayers[1], out, 4);
-    player.send(out, 6);
+    OutputSocket(c_ip, 50422).send(out, 6);
 }
 
 

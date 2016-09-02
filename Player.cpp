@@ -20,7 +20,7 @@ health(100),
 playerInfo(0),
 ip(socket.ip),
 nick(nick),
-ammo(20)
+ammo(10)
 {
     boundingBox = BoundingBox(position.x, position.y, 50, 50);
     updateCross();
@@ -195,6 +195,23 @@ int Player::getTeam() {
 int Player::getValid() {
     return (playerInfo & (0x0200)) >> 9;
 }
+
+void Player::sendPlayerId(int16_t message_number, int16_t command_type)
+{
+    char playerIdBuffer[100];
+    size_t pId_pos = 0;
+
+    Serialization::intToChars(message_number, playerIdBuffer, pId_pos);
+    pId_pos += 4;
+    Serialization::shortToChars(command_type, playerIdBuffer, pId_pos);
+    pId_pos += 2;
+    Serialization::shortToChars(playerId, playerIdBuffer, pId_pos);
+    pId_pos += 2;
+
+    send(playerIdBuffer, pId_pos);
+}
+
+
 
 
 

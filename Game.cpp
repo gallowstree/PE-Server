@@ -6,11 +6,13 @@
 #include "Game.h"
 #include "serialization.h"
 #include "command.h"
+#include "Pickup.h"
 
 const int16_t s_players_command = 0;
 const int16_t s_projectiles_command = 1;
 const int16_t s_player_id_command = 2;
 const int16_t s_gameover_command = 3;
+const int16_t s_pickups_command = 4;
 
 const int16_t c_input_command = 0;
 const int16_t c_team_command = 2;
@@ -206,17 +208,29 @@ void Game::processInputCmd(const command_t &command)
     }
 }
 
-void Game::networkUpdate()
+size_t Game::constructPlayersMessage(char outbuffer[])
 {
-    char outbuffer[512];
-    char projectiles[1500];
+    size_t pos = 0;
 
-    size_t pos = 0, projectile_pos = 0;
     Serialization::intToChars(message_number++, outbuffer, pos); //idmsg 0 - 3
     pos += 4;
     Serialization::shortToChars(s_players_command, outbuffer, pos); //Command type 4 - 5
     pos += 2;
 
+    for (auto &player : players)
+    {
+        pos += player->serialize(outbuffer, pos);
+    }
+
+    Serialization::shortToChars(-1, outbuffer, pos);
+    pos += 2;
+
+    return pos;
+}
+
+size_t Game::constructProjectileMessage(char projectiles[], int16_t *porjMsgNum)
+{
+    size_t projectile_pos = 0;
     const auto projectile_msgno = message_number++;
     Serialization::intToChars(projectile_msgno, projectiles, projectile_pos);
     projectile_pos += 4;
@@ -225,8 +239,6 @@ void Game::networkUpdate()
 
     for (auto &player : players)
     {
-        pos += player->serialize(outbuffer, pos);
-
         for (auto &projectile : player->projectiles)
         {
             if (!projectile.acked)
@@ -241,16 +253,59 @@ void Game::networkUpdate()
         }
     }
 
+    Serialization::shortToChars(-1, projectiles, projectile_pos);
+    projectile_pos += 2;
+
+    return projectile_pos;
+}
+
+size_t Game::constructPickupMessage(char outbuffer[])
+{
+    size_t pos = 0;
+
+    Serialization::intToChars(message_number++, outbuffer, pos); //idmsg 0 - 3
+    pos += 4;
+    Serialization::shortToChars(s_pickups_command, outbuffer, pos); //Command type 4 - 5
+    pos += 2;
+
+    for (auto &entities : world.static_entities)
+    {
+        for (auto &entity : entities)
+        {
+            if (entity->type == Pickup_T)
+            {
+                auto pickup = ((Pickup*) entity);
+                if (pickup->enabled)
+                {
+                    Serialization::shortToChars(pickup->pickupId, outbuffer, pos);
+                    pos += 2;
+                }
+            }
+        }
+    }
+
     Serialization::shortToChars(-1, outbuffer, pos);
     pos += 2;
 
-    Serialization::shortToChars(-1, projectiles, projectile_pos);
-    projectile_pos += 2;
+    return pos;
+}
+
+void Game::networkUpdate()
+{
+    char outbuffer[512];
+    char pickupBuffer[512];
+    char projectiles[1500];
+    int16_t projectile_msgno = 0;
+
+    size_t pos = constructPlayersMessage(outbuffer);
+    size_t projectile_pos = constructProjectileMessage(projectiles, &projectile_msgno);
+    size_t pickup_pos = constructPickupMessage(pickupBuffer);
 
     //Maybe move this to another thread?
     for (auto &player : players)
     {
         player->send(outbuffer, pos);
+
         if (projectile_pos > 10)
         {
             player->send(projectiles, projectile_pos);
@@ -261,19 +316,14 @@ void Game::networkUpdate()
             pendingMessageAcks[projectile_msgno].push_back(player->playerId);
         }
 
+        if (pickup_pos > 8)
+        {
+            player->send(pickupBuffer, pickup_pos);
+        }
+
         if (player->hasNotAckedId)
         {
-            char playerIdBuffer[100];
-            size_t pId_pos = 0;
-
-            Serialization::intToChars(message_number++, playerIdBuffer, pId_pos);
-            pId_pos += 4;
-            Serialization::shortToChars(s_player_id_command, playerIdBuffer, pId_pos);
-            pId_pos += 2;
-            Serialization::shortToChars(player->playerId, playerIdBuffer, pId_pos);
-            pId_pos += 2;
-
-            player->send(playerIdBuffer, pId_pos);
+            player->sendPlayerId(message_number++, s_player_id_command);
         }
     }
 }

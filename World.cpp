@@ -5,8 +5,10 @@
 #include <fstream>
 #include "World.h"
 #include "Wall.h"
+#include "Pickup.h"
 #include <string.h>
 #include <cmath>
+#include <sstream>
 
 World::World()
 {
@@ -17,55 +19,20 @@ void World::init(const char *mapName, std::vector<Player*> *players)
 {
     reset();
     this->players = players;
-    readMap(mapName);
+    readMap2(mapName);
     createAreas();
     indexStaticEntities();
 }
-
-int World::parseMapParameter(std::string & line)
-{
-    auto commaPos = line.find(',');
-    char * parameter = (char *)malloc((commaPos+1)*sizeof(char));
-    strcpy(parameter,line.substr(0,commaPos).c_str());
-    line.erase(0, line.find(',') + 1);
-    int value = atoi(parameter);
-    free(parameter);
-    return value;
-}
-
-void World::readMap(const char *name)
-{
-    std::ifstream mapFile(name);
-    std::string line = "";
-
-    std::getline(mapFile, line);
-    bounds.width = this->parseMapParameter(line);
-    bounds.height = this->parseMapParameter(line);
-    area_size = atoi(line.c_str());
-
-    while (std::getline(mapFile, line))
-    {
-        int objectType = parseMapParameter(line);
-        int left =  parseMapParameter(line);
-        int top =  parseMapParameter(line);
-        int width =   parseMapParameter(line);
-        int height =  atoi(line.c_str());
-
-        if (objectType == 0) //wall
-            world_entities.push_back(Wall(left, top, width, height));
-    }
-}
-
 
 void World::indexStaticEntities()
 {
     for (auto& entity : world_entities)
     {
-        if (entity.isStatic)
+        if (entity->isStatic)
         {
-            for (auto& area : areasForEntity(entity))
+            for (auto& area : areasForEntity(*entity))
             {
-                static_entities[area].push_back(&entity);
+                static_entities[area].push_back(entity);
             }
         }
     }
@@ -181,6 +148,13 @@ void World::checkWallCollisions(Player &player)
 
 void World::reset() {
     areas.clear();
+
+    //Delete all allocated players and clear the vector
+    for (auto it = world_entities.begin() ; it != world_entities.end(); ++it)
+    {
+        delete (*it);
+    }
+
     static_entities.clear();
     world_entities.clear();
     moving_entities.clear();
@@ -197,3 +171,47 @@ void World::indexMovingEntities()
     }
 }
 
+
+void World::readMap2(const char *name)
+{
+    std::ifstream mapFile(name);
+    std::string line = "";
+
+    while (std::getline(mapFile, line))
+    {
+        std::vector<const char*> params;
+        std::stringstream ss(line);
+        std::string item;
+        while (getline(ss, item, ','))
+        {
+            auto paramString = (char *) malloc(item.length());
+            strcpy(paramString, item.c_str());
+            params.push_back(paramString);
+        }
+
+        if (strncmp(params[0], "1", strlen(params[0])) == 0) //World info
+        {
+            bounds.width  = atoi(params[1]);
+            bounds.height = atoi(params[2]);
+            area_size     = atoi(params[3]);
+
+            printf("%f, %f, %f \n", bounds.width, bounds.height, area_size);
+        }
+        else if (strncmp(params[0], "0", strlen(params[0])) == 0) //Wall
+        {
+            world_entities.push_back(new Wall(atoi(params[1]), atoi(params[2]), atoi(params[3]), atoi(params[4])));
+        }
+        else if (strncmp(params[0], "3", strlen(params[0])) == 0)//Pickup
+        {
+            world_entities.push_back(new Pickup(atoi(params[1]), atoi(params[2]), atoi(params[3]),
+                                            atoi(params[4]), atoi(params[5]), atoi(params[6]), atoi(params[7]),
+                                            atoi(params[8])));
+        }
+
+        for (auto& param : params)
+        {
+            free((void *)param);
+        }
+    }
+
+}

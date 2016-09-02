@@ -55,6 +55,12 @@ private:
     void broadcastResult();
 
     bool gameEnded;
+
+    size_t constructPlayersMessage(char *outbuffer);
+
+    size_t constructProjectileMessage(char *projectiles, int16_t* projMsgNum);
+
+    size_t constructPickupMessage(char *outbuffer);
 };
 
 

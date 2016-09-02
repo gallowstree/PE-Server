@@ -13,9 +13,10 @@
 
 enum EntityType
 {
-    Wall_T,
-    Player_T,
-    Projectile_T
+    Wall_T = 1,
+    Player_T = 2,
+    Projectile_T = 3,
+    Pickup_T = 4
 };
 
 

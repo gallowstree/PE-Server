@@ -46,6 +46,8 @@ public:
     Player(int16_t playerId, sf::Vector2f position, OutputSocket socket, char * nick);
 
     void send(const char* outbuffer, size_t size, int32_t reliableId = -1);
+    void sendPlayerId(int16_t message_number, int16_t command_type);
+
     void update(sf::Time elapsedTime);
 
     int getTeam();

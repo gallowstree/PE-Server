@@ -19,7 +19,8 @@ socket(socket),
 health(100),
 playerInfo(0),
 ip(socket.ip),
-nick(nick)
+nick(nick),
+ammo(20)
 {
     boundingBox = BoundingBox(position.x, position.y, 50, 50);
     updateCross();
@@ -89,13 +90,14 @@ void Player::updateProjectiles(sf::Time elapsedTime)
         }
     }
 
-    if (controls & 0x10)
+    if (controls & 0x10  && health > 0)
     {
-        if(timeSinceLastShot.asMilliseconds() > 200 && health > 0)
+        if(timeSinceLastShot.asMilliseconds() > 200 && ammo > 0)
         {
             timeSinceLastShot = sf::Time::Zero;
             auto pos = this->boundingBox.getPosition() + sf::Vector2f(boundingBox.width /2, boundingBox.height / 2);
             projectiles.push_back(Projectile(pos, 1000, this->rotation, 1000, 0, playerId));
+            ammo--;
         }
     }
 }
@@ -108,9 +110,9 @@ void Player::update(sf::Time elapsedTime)
 
 //Escribe la data del player al array de bytes en la posición indicada
 //Devuelve la cantidad de bytes escritos
-int Player::serialize(char * buffer, int position)
+int Player::serialize(char * buffer, int start)
 {
-    int pos = position;
+    int pos = start;
 
     Serialization::shortToChars(this->playerId | this->playerInfo, buffer, pos); //Player id 6 - 7
     pos += 2;
@@ -124,7 +126,9 @@ int Player::serialize(char * buffer, int position)
     pos += 2;
     strcpy(buffer + pos, nick);
     pos += strlen(nick) + 1;
-    return pos - position;
+    memcpy(buffer + pos, &ammo, 1);
+    pos++;
+    return pos - start;
 }
 
 void Player::updateCross()
@@ -157,6 +161,7 @@ void Player::intersectedWith(Entity* other, sf::FloatRect intersection)
         }
 
         if (intersection.intersects(horz_rect))
+
         {
             if (intersection.left < boundingBox.left + boundingBox.width / 2)
             {
@@ -171,9 +176,12 @@ void Player::intersectedWith(Entity* other, sf::FloatRect intersection)
     }
     else if (other->type == EntityType::Projectile_T)
     {
-        if (((Projectile*) other)->valid)
+        auto proj = ((Projectile*) other);
+        if (proj->valid)
         {
-            health -= 25;
+            health -= proj->getPower();
+            if (health < 0)
+                health = 0;
             //printf("player %i hit by projectile %i, health %i\n", playerId, other->entityId, health);
         }
     }

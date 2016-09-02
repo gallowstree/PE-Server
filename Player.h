@@ -50,7 +50,7 @@ public:
 
     int getTeam();
 
-    int serialize(char *buffer, int position);
+    int serialize(char *buffer, int start);
     void intersectedWith(Entity *other, sf::FloatRect intersection);
 
     int getValid();
@@ -61,6 +61,7 @@ public:
 
     char * nick;
 private:
+    unsigned char ammo;
 
     sf::Time timeSinceLastShot;
 

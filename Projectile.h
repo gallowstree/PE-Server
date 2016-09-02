@@ -26,7 +26,7 @@ class Projectile : public Entity
         int16_t projectileId;
         bool valid;
         bool acked;
-
+        int16_t getPower();
 
 
         Projectile(sf::Vector2f position, float speed, float angle, float range, int16_t projectileType, int16_t playerId);

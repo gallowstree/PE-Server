@@ -65,3 +65,9 @@ void Projectile::intersectedWith(Entity *other, sf::FloatRect intersection)
 {
     valid = false;
 }
+
+int16_t Projectile::getPower() {
+    return 25;
+}
+
+

@@ -8,7 +8,7 @@
 #include <SFML/Graphics.hpp>
 #include "Entity.h"
 
-static int16_t nextProjectileId;
+
 
 class Projectile : public Entity
 {
@@ -21,7 +21,7 @@ class Projectile : public Entity
     sf::RectangleShape rect;
 
 
-    public:
+public:
         int16_t playerId;
         int16_t projectileId;
         bool valid;
@@ -36,6 +36,8 @@ class Projectile : public Entity
         int16_t projectileType;
 
     void intersectedWith(Entity *other, sf::FloatRect intersection);
+
+    static int16_t nextProjectileId;
 };
 
 

@@ -4,12 +4,12 @@
 
 #include "Pickup.h"
 
-Pickup::Pickup(int l, int t, int w, int h, int type, int seconds, int initialState, int16_t id) {
+Pickup::Pickup(int l, int t, int w, int h, int type, int seconds, int initialState) {
     boundingBox.top = t;
     boundingBox.left = l;
     boundingBox.height = h;
     boundingBox.width = w;
-    pickupId = id;
+    pickupId = nextPickupId++;
     isStatic = true;
     enabled = initialState == 1;
     this->type = Pickup_T;

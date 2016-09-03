@@ -13,6 +13,7 @@
 #include "reliable_message.h"
 #include "Entity.h"
 #include "OutputSocket.h"
+#include "Pickup.h"
 
 
 class Player : public Entity
@@ -75,6 +76,11 @@ private:
 
     OutputSocket socket;
 
+    void intersectedWall(const sf::FloatRect &intersection);
+
+    void intersectedProjectile(Projectile *proj);
+
+    void intersectedPickup(Pickup *pPickup);
 };
 
 

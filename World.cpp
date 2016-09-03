@@ -158,6 +158,7 @@ void World::reset() {
     static_entities.clear();
     world_entities.clear();
     moving_entities.clear();
+    pickups.clear();
 }
 void World::indexMovingEntities()
 {
@@ -203,9 +204,10 @@ void World::readMap2(const char *name)
         }
         else if (strncmp(params[0], "3", strlen(params[0])) == 0)//Pickup
         {
-            world_entities.push_back(new Pickup(atoi(params[1]), atoi(params[2]), atoi(params[3]),
-                                            atoi(params[4]), atoi(params[5]), atoi(params[6]), atoi(params[7]),
-                                            atoi(params[8])));
+            auto pickup = new Pickup(atoi(params[1]), atoi(params[2]), atoi(params[3]),
+                                     atoi(params[4]), atoi(params[5]), atoi(params[6]), atoi(params[7]));
+            world_entities.push_back(pickup);
+            pickups.push_back(pickup);
         }
 
         for (auto& param : params)

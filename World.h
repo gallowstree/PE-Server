@@ -33,6 +33,7 @@ private:
 
     std::vector<std::vector<Entity*>> moving_entities;
     std::vector<Entity*> world_entities;
+    std::vector<Pickup*> pickups;
 
     void indexStaticEntities();
 

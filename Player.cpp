@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include "Player.h"
 #include "serialization.h"
+#include "Pickup.h"
 #include <string.h>
 #include <math.h>
 
@@ -148,43 +149,58 @@ void Player::intersectedWith(Entity* other, sf::FloatRect intersection)
 
     if (other->type == EntityType::Wall_T)
     {
-        if (intersection.intersects(vert_rect))
-        {
-            if (intersection.top > boundingBox.top + boundingBox.height / 2)
-            {
-                boundingBox.top -= intersection.height;
-            }
-            if (intersection.top < boundingBox.top + boundingBox.height / 2)
-            {
-                boundingBox.top += intersection.height;
-            }
-        }
-
-        if (intersection.intersects(horz_rect))
-
-        {
-            if (intersection.left < boundingBox.left + boundingBox.width / 2)
-            {
-                boundingBox.left += intersection.width;
-            }
-            if (intersection.left > boundingBox.left + boundingBox.width / 2)
-            {
-                boundingBox.left -= intersection.width;
-            }
-        }
-        updateCross();
+        intersectedWall(intersection);
     }
     else if (other->type == EntityType::Projectile_T)
     {
         auto proj = ((Projectile*) other);
-        if (proj->valid)
+        intersectedProjectile(proj);
+    }
+    else if (other->type == EntityType::Pickup_T)
+    {
+        auto pickup = ((Pickup*) other);
+        if (pickup->enabled)
+            intersectedPickup(pickup);
+    }
+}
+
+void Player::intersectedProjectile(Projectile *proj) {
+    if (proj->valid)
+    {
+        health -= proj->getPower();
+        if (health < 0)
+            health = 0;
+        //printf("player %i hit by projectile %i, health %i\n", playerId, other->entityId, health);
+    }
+}
+
+void Player::intersectedWall(const sf::FloatRect &intersection)
+{
+    if (intersection.intersects(vert_rect))
+    {
+        if (intersection.top > boundingBox.top + boundingBox.height / 2)
         {
-            health -= proj->getPower();
-            if (health < 0)
-                health = 0;
-            //printf("player %i hit by projectile %i, health %i\n", playerId, other->entityId, health);
+            boundingBox.top -= intersection.height;
+        }
+        if (intersection.top < boundingBox.top + boundingBox.height / 2)
+        {
+            boundingBox.top += intersection.height;
         }
     }
+
+    if (intersection.intersects(horz_rect))
+    {
+        if (intersection.left < boundingBox.left + boundingBox.width / 2)
+        {
+            boundingBox.left += intersection.width;
+        }
+        if (intersection.left > boundingBox.left + boundingBox.width / 2)
+        {
+            boundingBox.left -= intersection.width;
+        }
+    }
+
+    updateCross();
 }
 
 int Player::getTeam() {
@@ -210,6 +226,22 @@ void Player::sendPlayerId(int16_t message_number, int16_t command_type)
 
     send(playerIdBuffer, pId_pos);
 }
+
+void Player::intersectedPickup(Pickup *pPickup)
+{
+    if (pPickup->pickupType == Health_T && health < 100)
+    {
+        health = 100;
+        pPickup->enabled = false;
+    }
+    else if (pPickup->pickupType == Ammo_T && ammo < 255)
+    {
+        ammo = (unsigned char) std::min(ammo + 15, 255);
+        pPickup->enabled = false;
+    }
+}
+
+
 
 
 

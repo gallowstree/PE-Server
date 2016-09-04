@@ -18,6 +18,9 @@ const int16_t c_input_command = 0;
 const int16_t c_team_command = 2;
 const int16_t c_join_game_command = 3;
 
+int16_t Projectile::nextProjectileId;
+int16_t Pickup::nextPickupId;
+
 Game::Game() :
         TimePerFrame(sf::seconds(1/120.0f)),
         TimePerNetworkUpdate(sf::seconds(1/30.0f)),
@@ -35,6 +38,9 @@ Game::Game() :
 void Game::reset()
 {
     pthread_mutex_lock(&commandQueueMutex);
+
+    Projectile::nextProjectileId = 0;
+    Pickup::nextPickupId = 0;
 
     timeSinceGameEnded = sf::Time::Zero;
 
@@ -65,6 +71,8 @@ void Game::reset()
     noPlayers[0] = 0;
     noPlayers[1] = 0;
     gameEnded = false;
+
+
 
     pthread_mutex_unlock(&commandQueueMutex);
 }
@@ -275,11 +283,11 @@ size_t Game::constructPickupMessage(char outbuffer[])
             if (entity->type == Pickup_T)
             {
                 auto pickup = ((Pickup*) entity);
-                if (pickup->enabled)
-                {
-                    Serialization::shortToChars(pickup->pickupId, outbuffer, pos);
-                    pos += 2;
-                }
+
+                Serialization::shortToChars(pickup->pickupId, outbuffer, pos);
+                pos += 2;
+                outbuffer[pos] = (char)(pickup->enabled ? 1 : 0);
+                pos++;
             }
         }
     }

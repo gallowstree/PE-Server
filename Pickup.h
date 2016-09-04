@@ -22,6 +22,9 @@ public:
     int16_t pickupId;
     bool enabled;
 	static int16_t nextPickupId;
+    const int seconds;
+    void update(sf::Time elapsedTime);
+    sf::Time elapsedTime;
 };
 
 

@@ -4,7 +4,10 @@
 
 #include "Pickup.h"
 
-Pickup::Pickup(int l, int t, int w, int h, int type, int seconds, int initialState) {
+Pickup::Pickup(int l, int t, int w, int h, int type, int seconds, int initialState) :
+seconds(seconds),
+elapsedTime(sf::Time::Zero)
+{
     boundingBox.top = t;
     boundingBox.left = l;
     boundingBox.height = h;
@@ -15,4 +18,18 @@ Pickup::Pickup(int l, int t, int w, int h, int type, int seconds, int initialSta
     this->type = Pickup_T;
     pickupType = type == 0 ? Ammo_T : Health_T;
 }
+
+void Pickup::update(sf::Time elapsedTime)
+{
+    this->elapsedTime += elapsedTime;
+
+    if (this->elapsedTime.asSeconds() > seconds)
+    {
+        this->enabled = true;
+        this->elapsedTime = sf::Time::Zero;
+    }
+
+}
+
+
 

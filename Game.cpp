@@ -291,7 +291,7 @@ size_t Game::constructPickupMessage(char outbuffer[])
             }
         }
     }
-
+    printf("\n");
     Serialization::shortToChars(-1, outbuffer, pos);
     pos += 2;
 

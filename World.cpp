@@ -97,6 +97,11 @@ void World::update(sf::Time elapsedTime)
         player->update(elapsedTime);
     }
 
+    for (auto &pickup : pickups)
+    {
+        pickup->update(elapsedTime);
+    }
+
 }
 
 void World::checkProjectileCollisions(int16_t currentPlayerEntityId, Projectile &proj)

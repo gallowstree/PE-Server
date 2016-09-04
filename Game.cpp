@@ -372,7 +372,7 @@ void Game::processJoinCmd(command_t &command)
 
         printf("Created player %i with ip %s and nick %s team pending!\n", new_player_id, c_ip, nick);
 
-        Player* newPlayer = new Player(new_player_id, sf::Vector2f(20.0f, 20.0f), OutputSocket(c_ip, 50421), nick);
+        Player* newPlayer = new Player(new_player_id, sf::Vector2f(50.0f, 50.0f), OutputSocket(c_ip, 50421), nick);
         newPlayer->movementBounds = sf::FloatRect(0.0f, 0.0f, world.bounds.width, world.bounds.height);
         players.push_back(newPlayer);
         sendGameInfo(c_ip);

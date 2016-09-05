@@ -124,7 +124,6 @@ void Game::receiveMessage(char *buffer, size_t nBytes, sockaddr_in *clientAddr)
             Serialization::charsToShort(buffer, command.team, 2);
             break;
         case c_join_game_command:
-            printf("here!\n");
             memset(command.nickname,0,7);
             strcpy(command.nickname, buffer + 2);
             printf("Received nick '%s' length: %i\n", command.nickname, strlen(command.nickname));
@@ -291,7 +290,6 @@ size_t Game::constructPickupMessage(char outbuffer[])
             }
         }
     }
-    printf("\n");
     Serialization::shortToChars(-1, outbuffer, pos);
     pos += 2;
 

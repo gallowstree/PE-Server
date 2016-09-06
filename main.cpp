@@ -9,8 +9,8 @@ int main()
 
     Game g;
 
-    ServerSocket s("192.168.1.12", 50420, &g);
-    //ServerSocket s("192.168.43.14", 50420, &g);
+    //ServerSocket s("127.0.0.1", 50420, &g);
+    ServerSocket s("192.168.2.154", 50420, &g);
 
 
     pthread_t listening_thread;

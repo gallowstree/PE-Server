@@ -176,6 +176,7 @@ void Game::processTeamCmd(const command_t &command)
             player->setTeam(command.team);
             player->setValid(1);
             printf("Setting team for player, ID: %i, TEAM: %i\n, VALID: %i", playerIndex, player->getTeam(), player->getValid());
+            world.randomSpawn(player);
         }
     }
     else
@@ -291,7 +292,6 @@ size_t Game::constructPickupMessage(char outbuffer[])
             }
         }
     }
-    printf("\n");
     Serialization::shortToChars(-1, outbuffer, pos);
     pos += 2;
 
@@ -380,7 +380,7 @@ void Game::processJoinCmd(command_t &command)
 
         printf("Created player %i with ip %s and nick %s team pending!\n", new_player_id, c_ip, nick);
 
-        Player* newPlayer = new Player(new_player_id, sf::Vector2f(50.0f, 50.0f), OutputSocket(c_ip, 50421), nick);
+        Player* newPlayer = new Player(new_player_id, sf::Vector2f(-world.bounds.width, -world.bounds.height), OutputSocket(c_ip, 50421), nick);
         newPlayer->movementBounds = sf::FloatRect(0.0f, 0.0f, world.bounds.width, world.bounds.height);
         players.push_back(newPlayer);
         sendGameInfo(c_ip);

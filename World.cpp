@@ -17,6 +17,7 @@ World::World()
 
 void World::init(const char *mapName, std::vector<Player*> *players)
 {
+    srand(time(0));
     reset();
     this->players = players;
     readMap2(mapName);
@@ -67,7 +68,6 @@ std::vector<int16_t> World::areasForEntity(const Entity &entity)
         return found;
 
     //x + noAreasY * y
-
 
     int i = 0;
     for (auto &area : areas)
@@ -214,6 +214,10 @@ void World::readMap2(const char *name)
             world_entities.push_back(pickup);
             pickups.push_back(pickup);
         }
+        else if (strncmp(params[0], "4", strlen(params[0])) == 0)
+        {
+            spawn_locations.push_back(sf::Vector2f(atof(params[1]), atof(params[2])));
+        }
 
         for (auto& param : params)
         {
@@ -222,3 +226,15 @@ void World::readMap2(const char *name)
     }
 
 }
+
+void World::randomSpawn(Player* p)
+{
+    int random = rand() % spawn_locations.size();
+    auto position = spawn_locations[random];
+    p->boundingBox.left = position.x;
+    p->boundingBox.top = position.y;
+
+    spawn_locations.erase(spawn_locations.begin() + random);
+}
+
+

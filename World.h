@@ -22,9 +22,11 @@ public:
     std::vector<Player*>* players;
 
     sf::FloatRect bounds;
-//Every position in the first vector represents an area (area 0, 1, ..., n)
-//Every vector in each position has references to every object in the area
-std::vector<std::vector<Entity*>> static_entities;
+    //Every position in the first vector represents an area (area 0, 1, ..., n)
+    //Every vector in each position has references to every object in the area
+    std::vector<std::vector<Entity*>> static_entities;
+    void randomSpawn(Player *p);
+
 private:
     std::vector<Area*> areas;
     float area_size;
@@ -34,6 +36,7 @@ private:
     std::vector<std::vector<Entity*>> moving_entities;
     std::vector<Entity*> world_entities;
     std::vector<Pickup*> pickups;
+    std::vector<sf::Vector2f> spawn_locations;
 
     void indexStaticEntities();
 
@@ -48,6 +51,9 @@ private:
     void checkProjectileCollisions(int16_t currentPlayerEntityId, Projectile &proj);
 
     void readMap2(const char* map);
+
+
+
 };
 
 

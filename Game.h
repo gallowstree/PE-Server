@@ -50,7 +50,7 @@ private:
     void processTeamCmd(const command_t &command);
     void processJoinCmd(command_t &command);
     int16_t findPlayerIndexByIp(const char * ip);
-    void sendGameInfo(char * c_ip);
+    void sendGameInfo(const char * c_ip);
     bool checkForGameEnd();
     void broadcastResult();
 

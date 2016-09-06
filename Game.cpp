@@ -359,16 +359,26 @@ void Game::processJoinCmd(command_t &command)
 {
     int playerIdx = findPlayerIndexByIp(command.client_ip);
 
-
+    printf("procesando join\n");
     if (playerIdx != -1) //Player already exists
     {
-        char out[2];
-        Serialization::shortToChars(2, out, 0);
-        strcpy(players[playerIdx]->nick,command.nickname);
-        OutputSocket(command.client_ip, 50422).send(out, 2);
+        printf("recibi aqui pIDx %d\n",playerIdx);
+        if(players[playerIdx]->getValid())
+        {
+            char out[2];
+            Serialization::shortToChars(2, out, 0);
+            strcpy(players[playerIdx]->nick, command.nickname);
+            OutputSocket(command.client_ip, 50422).send(out, 2);
+        }
+        else
+        {
+            printf("here brotha!");
+            sendGameInfo(players[playerIdx]->ip);
+        }
     }
     else if (players.size() < maxPlayers) //There is room for the player
     {
+        printf("recibi aqui! :p");
         int16_t new_player_id = (int16_t) players.size();
         char * c_ip = (char *)calloc(strlen(command.client_ip)+1, sizeof(char));
         strcpy(c_ip,command.client_ip);
@@ -386,6 +396,7 @@ void Game::processJoinCmd(command_t &command)
     }
     else //Server full
     {
+        printf("recibi aqui! :O");
         char out[2];
         Serialization::shortToChars(3, out, 0);
         OutputSocket(command.client_ip, 50422).send(out, 2);
@@ -406,8 +417,9 @@ int16_t Game::findPlayerIndexByIp(const char * ip)
 
 
 
-void Game::sendGameInfo(char * c_ip)
+void Game::sendGameInfo(const char * c_ip)
 {
+    printf("sending info");
     char out[6];
     Serialization::shortToChars(1, out, 0);
     Serialization::shortToChars(noPlayers[0], out, 2);

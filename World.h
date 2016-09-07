@@ -14,6 +14,8 @@
 class World
 {
 public:
+    int16_t selectedMap = 0;
+    std::vector<const char *> maps = {"maps/level1.txt","maps/level2.txt"};
     World();
     void init(const char * mapName, std::vector<Player*>* players);
     void update(sf::Time elapsedTime);

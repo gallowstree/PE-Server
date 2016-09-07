@@ -61,7 +61,9 @@ void Game::reset()
     pendingMessageAcks.clear();
 
     //Reset world and load map
-    world.init("maps/level1.txt", &players);
+    srand(time(NULL));
+    world.selectedMap = rand() % world.maps.size();
+    world.init(world.maps[world.selectedMap], &players);
 
     //Clear state variables
     message_number = 0;
@@ -363,10 +365,11 @@ void Game::processJoinCmd(command_t &command)
     {
         if(players[playerIdx]->getValid())
         {
-            char out[2];
+            char out[4];
             Serialization::shortToChars(2, out, 0);
+            Serialization::shortToChars(world.selectedMap, out, 2);
             strcpy(players[playerIdx]->nick, command.nickname);
-            OutputSocket(command.client_ip, 50422).send(out, 2);
+            OutputSocket(command.client_ip, 50422).send(out, 4);
         }
         else
         {
@@ -415,11 +418,12 @@ int16_t Game::findPlayerIndexByIp(const char * ip)
 void Game::sendGameInfo(const char * c_ip)
 {
     printf("sending info");
-    char out[6];
+    char out[8];
     Serialization::shortToChars(1, out, 0);
-    Serialization::shortToChars(noPlayers[0], out, 2);
-    Serialization::shortToChars(noPlayers[1], out, 4);
-    OutputSocket(c_ip, 50422).send(out, 6);
+    Serialization::shortToChars(world.selectedMap, out, 2);
+    Serialization::shortToChars(noPlayers[0], out, 4);
+    Serialization::shortToChars(noPlayers[1], out, 6);
+    OutputSocket(c_ip, 50422).send(out, 8);
 }
 
 

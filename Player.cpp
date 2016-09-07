@@ -237,7 +237,7 @@ void Player::intersectedPickup(Pickup *pPickup)
     }
     else if (pPickup->pickupType == Ammo_T && ammo < 255)
     {
-        ammo = (unsigned char) std::min(ammo + 15, 255);
+        ammo = (unsigned char) std::min(ammo + 5, 255);
         pPickup->enabled = false;
         pPickup->elapsedTime = sf::Time::Zero;
     }

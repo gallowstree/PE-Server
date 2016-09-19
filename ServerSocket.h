@@ -11,7 +11,7 @@
 class SocketListener
 {
 public:
-    virtual void receiveMessage(char buffer[], size_t nBytes, sockaddr_in* clientAddr) = 0;
+    virtual void receiveMessage(char buffer[], size_t nBytes, char * client_ip) = 0;
 };
 
 

@@ -109,12 +109,12 @@ void Game::run()
 
 }
 
-void Game::receiveMessage(char *buffer, size_t nBytes, sockaddr_in *clientAddr)
+void Game::receiveMessage(char *buffer, size_t nBytes, char * client_ip)
 {
     command_t command;
     Serialization::charsToShort(buffer, command.commandType, 0);
     command.commandType = command.commandType;
-    command.client_ip = inet_ntoa(clientAddr->sin_addr);
+    command.client_ip = client_ip;
 
     switch (command.commandType)
     {
@@ -159,6 +159,7 @@ void Game::processEvents()
         {
             processJoinCmd(command);
         }
+        free(command.client_ip);
     }
     pthread_mutex_unlock(&commandQueueMutex);
 }
@@ -166,7 +167,7 @@ void Game::processEvents()
 void Game::processTeamCmd(const command_t &command)
 {
     auto playerIndex = findPlayerIndexByIp(command.client_ip);
-
+    printf("command ip %s \n",command.client_ip);
     if (playerIndex != -1)
     {
         auto player = players[playerIndex];
@@ -408,7 +409,9 @@ int16_t Game::findPlayerIndexByIp(const char * ip)
     for(auto &player : players)
     {
         if(strcmp(player->ip,ip) == 0)
+        {
             playerIndex = player->playerId;
+        }
     }
     return  playerIndex;
 }

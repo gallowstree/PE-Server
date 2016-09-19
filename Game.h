@@ -42,7 +42,7 @@ private:
     World world;
     pthread_mutex_t commandQueueMutex;
 
-    void receiveMessage(char *buffer, size_t nBytes, sockaddr_in *clientAddr);
+    void receiveMessage(char *buffer, size_t nBytes, char * client_ip);
     void deserializeInputCmd(commamd &command, const char *buffer);
     void processEvents();
     void networkUpdate();

@@ -7,6 +7,7 @@
 #include "ServerSocket.h"
 #include <stdio.h>
 #include <errno.h>
+#include <malloc.h>
 
 ServerSocket::ServerSocket(const char *ip, int port, SocketListener *listener) :
 ip(ip),
@@ -46,7 +47,10 @@ void ServerSocket::run()
 
         if (listener != nullptr)
         {
-            listener->receiveMessage(buffer, nBytes, &clientAddr);
+            char * client_ip = (char *)malloc(strlen(inet_ntoa(clientAddr.sin_addr))+1);
+            memset(client_ip,0,strlen(inet_ntoa(clientAddr.sin_addr))+1);
+            strcpy(client_ip,inet_ntoa(clientAddr.sin_addr));
+            listener->receiveMessage(buffer, nBytes, client_ip);
         }
     }
 }

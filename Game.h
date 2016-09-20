@@ -33,7 +33,7 @@ private:
     int16_t alivePlayers[2];
 
     std::vector<Player*> players;
-    std::queue<command_t*> commandQueue;
+    std::queue<command_t> commandQueue;
     std::map<int32_t, std::vector<Projectile*>> projectilesInMessage;
     std::map<int32_t, std::vector<int16_t>> pendingMessageAcks;
 
@@ -42,8 +42,10 @@ private:
     World world;
     pthread_mutex_t commandQueueMutex;
 
-    void receiveMessage(char *buffer, size_t nBytes, sockaddr_in *clientAddr);
-    void deserializeInputCmd(commamd *command, const char *buffer);
+
+    void receiveMessage(char *buffer, size_t nBytes, char * client_ip);
+    void deserializeInputCmd(commamd &command, const char *buffer);
+
     void processEvents();
     void networkUpdate();
     void processInputCmd(const command_t &command);

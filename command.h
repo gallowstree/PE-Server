@@ -13,7 +13,7 @@ typedef struct commamd
     int msgNum;
     int controls;
     float rotation;
-    const char * client_ip;
+    char * client_ip;
     char nickname[7];
     int numberOfAcks;
     int32_t *messageAcks;

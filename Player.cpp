@@ -229,7 +229,6 @@ int Player::getValid() {
 
 bool Player::getInvisible()
 {
-    printf("get %x04\n", playerInfo);
     return ((playerInfo & (0x0400)) >> 10) != 0;
 }
 
@@ -267,7 +266,6 @@ void Player::intersectedPickup(Pickup *pPickup)
         setInvisible();
         invisibleTime = sf::Time::Zero;
         pPickup->enabled = false;
-        printf("Invisible\n");
     }
 }
 

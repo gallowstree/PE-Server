@@ -45,7 +45,7 @@ void Game::reset()
     timeSinceGameEnded = sf::Time::Zero;
 
     //Empty command queue
-    std::queue<command_t*>().swap(commandQueue);
+    std::queue<command_t>().swap(commandQueue);
 
     //Delete all allocated players and clear the vector
     for (auto it = players.begin() ; it != players.end(); ++it)
@@ -109,26 +109,26 @@ void Game::run()
 
 }
 
-void Game::receiveMessage(char *buffer, size_t nBytes, sockaddr_in *clientAddr)
+void Game::receiveMessage(char *buffer, size_t nBytes, char * client_ip)
 {
-    command_t* command = new command_t;
-    Serialization::charsToShort(buffer, command->commandType, 0);
-    command->commandType = command->commandType;
-    command->client_ip = inet_ntoa(clientAddr->sin_addr);
+    command_t command;
+    Serialization::charsToShort(buffer, command.commandType, 0);
+    command.commandType = command.commandType;
+    command.client_ip = client_ip;
 
-    switch (command->commandType)
+    switch (command.commandType)
     {
         case c_input_command:
             deserializeInputCmd(command, buffer);
             break;
         case c_team_command:
             printf("Received join command\n");
-            Serialization::charsToShort(buffer, command->team, 2);
+            Serialization::charsToShort(buffer, command.team, 2);
             break;
         case c_join_game_command:
-            memset(command->nickname,0,7);
-            strcpy(command->nickname, buffer + 2);
-            printf("Received nick '%s' length: %i\n", command->nickname, strlen(command->nickname));
+            memset(command.nickname,0,7);
+            strcpy(command.nickname, buffer + 2);
+            printf("Received nick '%s' length: %i\n", command.nickname, strlen(command.nickname));
             break;
     }
 
@@ -144,22 +144,23 @@ void Game::processEvents()
     pthread_mutex_lock(&commandQueueMutex);
     while (!commandQueue.empty())
     {
-        command_t* command = commandQueue.front();
+        command_t command = commandQueue.front();
         commandQueue.pop();
 
-        if (command->commandType == c_input_command && command->playerId != -1 && players.size() >= command->playerId && !players.empty())
+        if (command.commandType == c_input_command && command.playerId != -1 && players.size() >= command.playerId && !players.empty())
         {
-            processInputCmd(*command);
+            processInputCmd(command);
         }
-        else if (command->commandType == c_team_command)
+        else if (command.commandType == c_team_command)
         {
-            processTeamCmd(*command);
+            processTeamCmd(command);
         }
-        else if (command->commandType == c_join_game_command)
+        else if (command.commandType == c_join_game_command)
         {
-            processJoinCmd(*command);
+            processJoinCmd(command);
         }
-        delete command;
+
+        free(command.client_ip);
     }
     pthread_mutex_unlock(&commandQueueMutex);
 }
@@ -167,7 +168,7 @@ void Game::processEvents()
 void Game::processTeamCmd(const command_t &command)
 {
     auto playerIndex = findPlayerIndexByIp(command.client_ip);
-
+    printf("command ip %s \n",command.client_ip);
     if (playerIndex != -1)
     {
         auto player = players[playerIndex];
@@ -338,21 +339,21 @@ void Game::networkUpdate()
     }
 }
 
-void Game::deserializeInputCmd(command_t *command, const char *buffer)
+void Game::deserializeInputCmd(command_t &command, const char *buffer)
 {
-    Serialization::charsToShort(buffer, command->playerId, 2);
-    Serialization::charsToInt(buffer, command->msgNum, 4);
-    Serialization::charsToInt(buffer, command->controls, 8);
-    Serialization::charsToFloat(buffer, command->rotation, 12);
-    Serialization::charsToInt(buffer, command->numberOfAcks, 16);
+    Serialization::charsToShort(buffer, command.playerId, 2);
+    Serialization::charsToInt(buffer, command.msgNum, 4);
+    Serialization::charsToInt(buffer, command.controls, 8);
+    Serialization::charsToFloat(buffer, command.rotation, 12);
+    Serialization::charsToInt(buffer, command.numberOfAcks, 16);
 
     size_t ack_pos = 20;
-    if (command->numberOfAcks > 0)
+    if (command.numberOfAcks > 0)
     {
-        command->messageAcks = new int[command->numberOfAcks];
-        for (int i = 0; i < command->numberOfAcks; i++)
+        command.messageAcks = new int[command.numberOfAcks];
+        for (int i = 0; i < command.numberOfAcks; i++)
         {
-            Serialization::charsToInt(buffer, command->messageAcks[i], ack_pos);
+            Serialization::charsToInt(buffer, command.messageAcks[i], ack_pos);
             ack_pos += 4;
         }
     }
@@ -409,7 +410,9 @@ int16_t Game::findPlayerIndexByIp(const char * ip)
     for(auto &player : players)
     {
         if(strcmp(player->ip,ip) == 0)
+        {
             playerIndex = player->playerId;
+        }
     }
     return  playerIndex;
 }

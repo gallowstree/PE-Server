@@ -13,6 +13,7 @@ int main()
     //ServerSocket s("192.168.1.117", 50420, &g);
 
 
+
     pthread_t listening_thread;
     pthread_create(&listening_thread, nullptr, &ServerSocket::runThread, &s);
 

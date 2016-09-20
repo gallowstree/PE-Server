@@ -16,7 +16,7 @@ elapsedTime(sf::Time::Zero)
     isStatic = true;
     enabled = initialState == 1;
     this->type = Pickup_T;
-    pickupType = type == 0 ? Ammo_T : Health_T;
+    pickupType = static_cast<PickupType>(type);
 }
 
 void Pickup::update(sf::Time elapsedTime)

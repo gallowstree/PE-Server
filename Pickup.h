@@ -10,8 +10,10 @@
 
 enum PickupType
 {
-    Ammo_T,
-    Health_T,
+	Ammo_T = 0,
+	Health_T = 1,
+	Portal_T = 2,
+	Invisible_T = 3
 };
 
 class Pickup : public Entity

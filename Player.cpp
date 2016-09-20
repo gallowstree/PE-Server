@@ -21,7 +21,8 @@ health(100),
 playerInfo(0),
 ip(socket.ip),
 nick(nick),
-ammo(10)
+ammo(10),
+invisibleTime(sf::Time::Zero)
 {
     boundingBox = BoundingBox(position.x, position.y, 50, 50);
     updateCross();
@@ -42,6 +43,11 @@ void Player::setTeam(int16_t team)
 {
     team = (int16_t) ((team & 0x1) << 8);
     playerInfo |= team;
+}
+
+void Player::setInvisible()
+{
+    playerInfo |= (int16_t) ((1) << 10);
 }
 
 
@@ -107,6 +113,15 @@ void Player::update(sf::Time elapsedTime)
 {
     updateMovement(elapsedTime);
     updateProjectiles(elapsedTime);
+
+    if (getInvisible())
+    {
+        invisibleTime += elapsedTime;
+        if (invisibleTime >= sf::seconds(10))
+        {
+            clearInvisible();
+        }
+    }
 }
 
 //Escribe la data del player al array de bytes en la posición indicada
@@ -159,7 +174,7 @@ void Player::intersectedWith(Entity* other, sf::FloatRect intersection)
     else if (other->type == EntityType::Pickup_T)
     {
         auto pickup = ((Pickup*) other);
-        if (pickup->enabled)
+        if (pickup->enabled || pickup->pickupType == Portal_T)
             intersectedPickup(pickup);
     }
 }
@@ -212,6 +227,12 @@ int Player::getValid() {
     return (playerInfo & (0x0200)) >> 9;
 }
 
+bool Player::getInvisible()
+{
+    printf("get %x04\n", playerInfo);
+    return ((playerInfo & (0x0400)) >> 10) != 0;
+}
+
 void Player::sendPlayerId(int16_t message_number, int16_t command_type)
 {
     char playerIdBuffer[100];
@@ -241,7 +262,20 @@ void Player::intersectedPickup(Pickup *pPickup)
         pPickup->enabled = false;
         pPickup->elapsedTime = sf::Time::Zero;
     }
+    else if (pPickup->pickupType == Invisible_T)
+    {
+        setInvisible();
+        invisibleTime = sf::Time::Zero;
+        pPickup->enabled = false;
+        printf("Invisible\n");
+    }
 }
+
+void Player::clearInvisible() {
+    playerInfo &= (int16_t) ~((1) << 10);
+}
+
+
 
 
 

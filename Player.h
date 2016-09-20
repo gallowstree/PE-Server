@@ -80,6 +80,13 @@ private:
     void intersectedProjectile(Projectile *proj);
 
     void intersectedPickup(Pickup *pPickup);
+
+    void setInvisible();
+    void clearInvisible();
+
+    bool getInvisible();
+
+    sf::Time invisibleTime;
 };
 
 
